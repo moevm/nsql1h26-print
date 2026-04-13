@@ -1,6 +1,5 @@
 FROM node:lts-alpine AS build
 
-ENV PNPM_HOME="/pnpm"
 RUN corepack enable
 
 WORKDIR /app
@@ -15,13 +14,13 @@ COPY client ./client
 
 RUN pnpm --filter @nosql/client run build
 
-FROM nginx:stable-alpine AS production
+FROM nginxinc/nginx-unprivileged:alpine3.23-slim AS production
 
 COPY --from=build /app/client/dist /usr/share/nginx/html
 
 COPY client/nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]
 
