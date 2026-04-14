@@ -15,6 +15,15 @@ services:
       dockerfile: server/Dockerfile
     ports:
       - 3000:3000
+    develop:
+      watch:
+        - action: sync
+          path: ./server
+          target: /app
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./server/package.json
     depends_on:
       db:
         condition: service_healthy
@@ -42,4 +51,3 @@ networks:
   app-network:
     driver: bridge
 
-  

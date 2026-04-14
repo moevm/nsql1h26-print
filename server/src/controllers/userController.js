@@ -1,14 +1,36 @@
+import bcrypt from 'bcryptjs';
 import { User } from '../models/userModel.js';
 
-export const login = async (req, res) => {
-    const { username, password } = req.body;
-    const user = await User.findOne({ username, password });
+const SALT_ROUNDS = 10;
 
-    if (user) {
-        res.json({ id: user.id, username: user.username, name: user.name });
-    } else {
-        res.status(401).json({ message: 'Неверный логин или пароль' });
+export const register = async (req, res) => {
+    const { email, password, first_name, last_name } = req.body;
+    if (!email || !password) return res.status(400).json({ message: 'Email и пароль обязательны' });
+
+    try {
+        const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
+        const newUser = await User.create({
+            email,
+            password_hash,
+            first_name,
+            last_name
+        });
+        res.status(201).json(newUser);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
+};
+
+export const login = async (req, res) => {
+    const { email, password } = req.body;
+    const user = await User.findOne({email});
+    if (!user) return res.status(401).json({ message: 'Пользователь не найден' });
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+
+    if (isMatch) {
+        const { password_hash, ...safeUser } = user;
+        res.json(safeUser);
+    } else res.status(401).json({ message: 'Неверный пароль' });
 };
 
 export const getUsers = async (req, res) => {
@@ -22,16 +44,17 @@ export const getUsers = async (req, res) => {
 
 export const getUserById = async (req, res) => {
     const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) return res.status(404).json({ message: 'Пользователь не найден' });
 
-    const { password, ...safeData } = user;
+    const { password_hash: _, ...safeData } = user;
     res.json(safeData);
 };
 
 export const updateUser = async (req, res) => {
-    const updated = await User.updateById(req.params.id, req.body);
-    if (!updated) return res.status(404).json({ message: 'Update failed' });
+    const { user_id: _, ...updateData } = req.body;
+    const updated = await User.updateById(req.params.id, updateData);
+    if (!updated) return res.status(404).json({ message: 'Ошибка обновления' });
 
-    const { password, ...safeData } = updated;
+    const { password_hash: __, ...safeData } = updated;
     res.json(safeData);
 };

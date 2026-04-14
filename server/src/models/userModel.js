@@ -1,31 +1,106 @@
-let users = [
-    { id: "1", username: "admin", password: "123", name: "System Admin", role: "admin" },
-    { id: "2", username: "ivan", password: "qwerty", name: "Иван Иванов", role: "user" }
-];
+import { getSession } from '../config/db.js';
 
 export const User = {
-    find: async (filters = {}) => {
-        let result = [...users];
-        if (filters.name) {
-            result = result.filter(u => u.name.toLowerCase().includes(filters.name.toLowerCase()));
+    create: async (userData) => {
+        const session = getSession();
+        try {
+            const result = await session.run(
+                `MERGE (u:User {email: $email})
+                         ON CREATE SET 
+                            u.user_id = randomUUID(),
+                            u.password_hash = $password_hash,
+                            u.email = $email,
+                            u.first_name = $first_name,
+                            u.last_name = $last_name,
+                            u.role = $role,
+                            u.created_at = datetime()
+                         RETURN u, (u.created_at IS NOT NULL) as is_new`,
+                {
+                    email: userData.email,
+                    password_hash: userData.password_hash,
+                    first_name: userData.first_name,
+                    last_name: userData.last_name,
+                    role: userData.role || 'client'
+                }
+            );
+
+            const record = result.records[0];
+            if (!record.get('is_new')) throw new Error('User already exists');
+            return record.get('u').properties;
+        } finally {
+            await session.close();
         }
-        return result.map(({ password, ...u }) => u);
+    },
+
+    find: async (filters = {}) => {
+        const session = getSession();
+        try {
+            let query = 'MATCH (u:User) ';
+            const params = {};
+            const clauses = [];
+
+            if (filters.first_name) {
+                clauses.push('u.first_name CONTAINS $first_name');
+                params.first_name = filters.first_name;
+            }
+            if (filters.role) {
+                clauses.push('u.role = $role');
+                params.role = filters.role;
+            }
+
+            if (clauses.length > 0) {
+                query += 'WHERE ' + clauses.join(' AND ');
+            }
+            query += ' RETURN u';
+
+            const result = await session.run(query, params);
+            return result.records.map(record => record.get('u').properties);
+        } finally {
+            await session.close();
+        }
     },
 
     findOne: async (criteria) => {
-        return users.find(u =>
-            Object.keys(criteria).every(key => u[key] === criteria[key])
-        );
+        const session = getSession();
+        try {
+            const result = await session.run(
+                `MATCH (u:User {email: $email}) 
+                 WHERE u.deactivated_at IS NULL
+                 RETURN u`,
+                criteria
+            );
+            if (result.records.length === 0) return null;
+            return result.records[0].get('u').properties;
+        } finally {
+            await session.close();
+        }
     },
 
-    findById: async (id) => {
-        return users.find(u => u.id === id);
+    findById: async (user_id) => {
+        const session = getSession();
+        try {
+            const result = await session.run(
+                'MATCH (u:User {user_id: $user_id}) RETURN u',
+                { user_id }
+            );
+            if (result.records.length === 0) return null;
+            return result.records[0].get('u').properties;
+        } finally {
+            await session.close();
+        }
     },
 
-    updateById: async (id, data) => {
-        const index = users.findIndex(u => u.id === id);
-        if (index === -1) return null;
-        users[index] = { ...users[index], ...data, id };
-        return users[index];
+    updateById: async (user_id, data) => {
+        const session = getSession();
+        try {
+            const result = await session.run(
+                'MATCH (u:User {user_id: $user_id}) SET u += $data RETURN u',
+                { user_id, data }
+            );
+            if (result.records.length === 0) return null;
+            return result.records[0].get('u').properties;
+        } finally {
+            await session.close();
+        }
     }
 };
