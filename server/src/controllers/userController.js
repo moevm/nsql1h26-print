@@ -4,7 +4,7 @@ import { User } from '../models/userModel.js';
 const SALT_ROUNDS = 10;
 
 export const register = async (req, res) => {
-    const { email, password, first_name, last_name } = req.body;
+    const { email, password, first_name, last_name, phone } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'Email и пароль обязательны' });
 
     try {
@@ -13,9 +13,11 @@ export const register = async (req, res) => {
             email,
             password_hash,
             first_name,
-            last_name
+            last_name,
+            phone
         });
-        res.status(201).json(newUser);
+        const { password_hash: _, ...safeUser } = newUser;
+        res.status(201).json(safeUser);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
