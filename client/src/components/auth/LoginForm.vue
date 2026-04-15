@@ -35,7 +35,7 @@
 </template>
 
 <script setup>
-// import { useUserStore } from '@/stores/userStore';
+import { useUserStore } from '@/stores/userStore';
 import {
   NButton,
   NForm,
@@ -46,7 +46,7 @@ import {
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-// const userStore = useUserStore();
+const userStore = useUserStore();
 
 const router = useRouter();
 const notification = useNotification();
@@ -97,7 +97,7 @@ const handleSubmit = async () => {
     await formRef.value?.validate();
     loading.value = true;
 
-   // await userStore.login(formData.email, formData.password);
+    await userStore.login(formData.email, formData.password);
 
     notification.success({
       title: 'Успешно',
@@ -105,7 +105,7 @@ const handleSubmit = async () => {
       duration: 3000,
     });
 
-    router.push('/courses');
+    router.push('/');
   } catch (error) {
     console.error('Ошибка входа:', error);
     notification.error({

@@ -2,6 +2,7 @@ import { useStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { authApi } from '@/api/auth.js'
 
 class AuthError extends Error {
   constructor(message, cause) {
@@ -55,9 +56,7 @@ export const useUserStore = defineStore('user', () => {
     isLoading.value = true;
     try {
       const data = await authApi.login(email, password);
-      setUser(data);
-      await router.push('/');
-      
+      setUser(data);     
       return data;
     } catch (error) {
       console.error('Ошибка входа:', error);
@@ -80,9 +79,7 @@ export const useUserStore = defineStore('user', () => {
     isLoading.value = true;
     try {
       const data = await authApi.register(userData);
-      setUser(data);
-      await router.push('/');
-      
+      setUser(data);     
       return data;
     } catch (error) {
       console.error('Ошибка регистрации:', error);

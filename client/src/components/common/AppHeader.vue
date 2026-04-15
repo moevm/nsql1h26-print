@@ -17,7 +17,7 @@
       </div>
 
       <div class="auth-buttons">
-        <template v-if="!isAuthenticated">
+        <template v-if="!userStore.isAuthenticated">
           <n-button type="primary" @click="handleLogin">
             Вход
           </n-button>
@@ -40,14 +40,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { NLayoutHeader, NMenu, NButton, NText } from 'naive-ui'
+import { useUserStore } from '@/stores/userStore'
 
 const router = useRouter()
 const route = useRoute()
-
-const isAuthenticated = ref(false)
+const userStore = useUserStore()
 
 const activeTab = ref('home')
 
@@ -74,16 +74,15 @@ const handleMenuSelect = (key) => {
 const handleLogin = () => router.push('/login')
 const handleRegister = () => router.push('/register')
 
-
 const goToAccount = () => {
-  if (userId.value) {
-    router.push(`/account/${userId.value}`)
+  if (userStore.user?.id) {
+    router.push(`/account/${userStore.user.id}`)
   }
 }
 
-const handleLogout = () => {
-  isAuthenticated.value = false
-  router.push('/')
+const handleLogout = async () => {
+  await userStore.logout()
+  // userStore.logout уже делает редирект на /login
 }
 
 const syncActiveTab = () => {
@@ -95,13 +94,11 @@ const syncActiveTab = () => {
 }
 
 // Следим за изменением маршрута
-import { watch } from 'vue'
 watch(() => route.path, () => {
   syncActiveTab()
 }, { immediate: true })
 
 </script>
-
 <style scoped>
 .header {
   background-color: var(--secondary-color);

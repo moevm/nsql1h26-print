@@ -78,7 +78,7 @@
 </template>
 
 <script setup>
-// import { useUserStore } from '@/stores/userStore';
+import { useUserStore } from '@/stores/userStore';
 import {
   NButton,
   NForm,
@@ -89,7 +89,7 @@ import {
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-// const userStore = useUserStore();
+const userStore = useUserStore();
 const router = useRouter();
 const notification = useNotification();
 
@@ -208,14 +208,13 @@ const handleSubmit = async () => {
     await formRef.value?.validate();
     loading.value = true;
 
-    // Вызов метода регистрации в store
-    // await userStore.register({
-    //   email: formData.email,
-    //   password: formData.password,
-    //   first_name: formData.first_name,
-    //   last_name: formData.last_name,
-    //   phone: formData.phone,
-    // });
+    await userStore.register({
+      email: formData.email,
+      password: formData.password,
+      first_name: formData.first_name,
+      last_name: formData.last_name,
+      phone: formData.phone,
+    });
 
     notification.success({
       title: 'Успешно',
@@ -223,7 +222,7 @@ const handleSubmit = async () => {
       duration: 3000,
     });
 
-    router.push('/courses');
+    router.push('/');
   } catch (error) {
     console.error('Ошибка регистрации:', error);
     
