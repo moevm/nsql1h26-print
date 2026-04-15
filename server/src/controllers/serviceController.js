@@ -2,7 +2,7 @@ import { Service } from '../models/serviceModel.js';
 
 export const getServices = async (req, res) => {
     try {
-        const services = await Service.find();
+        const services = await Service.find(req.query);
         res.json(services);
     } catch (error) {
         res.status(500).json({ error: error.message });

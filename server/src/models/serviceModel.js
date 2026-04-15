@@ -12,12 +12,45 @@ const formatProperties = (properties) => {
 };
 
 export const Service = {
-    find: async () => {
+    find: async (filters = {}) => {
         const session = getSession();
         try {
-            const result = await session.run(
-                'MATCH (s:Service) WHERE s.deactivated_at IS NULL RETURN s'
-            );
+            const params = {};
+            const clauses = ['s.deactivated_at IS NULL'];
+
+            if (filters.service_type) {
+                clauses.push('s.service_type = $service_type');
+                params.service_type = filters.service_type;
+            }
+
+            if (filters.color_mode) {
+                clauses.push('s.color_mode = $color_mode');
+                params.color_mode = filters.color_mode;
+            }
+
+            if (filters.min_price !== undefined) {
+                clauses.push('s.base_price >= $min_price');
+                params.min_price = parseFloat(filters.min_price);
+            }
+            if (filters.max_price !== undefined) {
+                clauses.push('s.base_price <= $max_price');
+                params.max_price = parseFloat(filters.max_price);
+            }
+
+            if (filters.circulation) {
+                const circ = parseInt(filters.circulation);
+                clauses.push('s.start_circulation <= $circ AND s.end_circulation >= $circ');
+                params.circ = circ;
+            }
+
+            const query = `
+                MATCH (s:Service) 
+                WHERE ${clauses.join(' AND ')} 
+                RETURN s 
+                ORDER BY s.service_type ASC, s.base_price ASC
+            `;
+
+            const result = await session.run(query, params);
             return result.records.map(record => formatProperties(record.get('s').properties));
         } finally {
             await session.close();
