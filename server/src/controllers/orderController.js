@@ -2,9 +2,12 @@ import { Order } from '../models/orderModel.js';
 
 export const createOrder = async (req, res) => {
     try {
-        // в будущем user_id будет браться из req.user
-        const { user_id, service_id, ...orderData } = req.body;
-        const newOrder = await Order.create(user_id, service_id, orderData);
+        const userId = req.user.user_id;
+        const { service_id, ...orderData } = req.body;
+        if (!service_id) {
+            return res.status(400).json({ message: 'service_id обязателен' });
+        }
+        const newOrder = await Order.create(userId, service_id, orderData);
         res.status(201).json(newOrder);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -13,6 +16,10 @@ export const createOrder = async (req, res) => {
 
 export const getOrders = async (req, res) => {
     try {
+        // if (req.user.role !== 'admin' && req.user.role !== 'employee') {
+        //     return res.status(403).json({ message: 'Доступ запрещен' });
+        // }
+
         const orders = await Order.find(req.query);
         res.json(orders);
     } catch (error) {

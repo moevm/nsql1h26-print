@@ -1,5 +1,12 @@
 import bcrypt from 'bcryptjs';
 import { User } from '../models/userModel.js';
+import jwt from 'jsonwebtoken';
+
+const generateToken = (id, role) => {
+    return jwt.sign({ id, role }, process.env.JWT_SECRET || 'super_secret_key', {
+        expiresIn: '30d'
+    });
+};
 
 const SALT_ROUNDS = 10;
 
@@ -12,7 +19,7 @@ export const register = async (req, res) => {
             password_hash
         });
         const { password_hash: _, ...safeUser } = newUser;
-        res.status(201).json(safeUser);
+        res.status(201).json({ ...safeUser, token: generateToken(newUser.user_id, newUser.role) });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -20,14 +27,22 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
     const { email, password } = req.body;
-    const user = await User.findOne({email});
-    if (!user) return res.status(401).json({ message: 'Пользователь не найден' });
-    const isMatch = await bcrypt.compare(password, user.password_hash);
 
-    if (isMatch) {
+    try {
+        const user = await User.findOne({ email });
+        if (!user) return res.status(401).json({ message: 'Пользователь не найден' });
+
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) return res.status(401).json({ message: 'Неверный пароль' });
         const { password_hash, ...safeUser } = user;
-        res.json(safeUser);
-    } else res.status(401).json({ message: 'Неверный пароль' });
+
+        res.json({
+            ...safeUser,
+            token: generateToken(user.user_id, user.role)
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
 
 export const getUsers = async (req, res) => {
