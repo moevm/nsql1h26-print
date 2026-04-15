@@ -34,11 +34,9 @@
   </n-form>
 </template>
 
-<script setup lang="ts">
+<script setup>
 // import { useUserStore } from '@/stores/userStore';
 import {
-  type FormInst,
-  type FormRules,
   NButton,
   NForm,
   NFormItem,
@@ -53,7 +51,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const notification = useNotification();
 
-const formRef = ref<FormInst | null>(null);
+const formRef = ref(null);
 const loading = ref(false);
 
 const formData = reactive({
@@ -66,7 +64,7 @@ const isFormValid = computed(() => {
 });
 
 // Правила валидации
-const rules: FormRules = {
+const rules = {
   email: [
     {
       required: true,

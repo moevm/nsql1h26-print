@@ -8,13 +8,29 @@
       </template>
 
       <LoginForm />
+      
+      <template #footer>
+        <div class="login-footer">
+          <n-text depth="3">Нет аккаунта?</n-text>
+          <n-button text type="primary" @click="goToRegister">
+            Зарегистрироваться
+          </n-button>
+        </div>
+      </template>
     </n-card>
   </div>
 </template>
 
 <script setup>
 import LoginForm from '@/components/auth/LoginForm.vue';
-import { NCard } from 'naive-ui';
+import { NCard, NText, NButton } from 'naive-ui';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const goToRegister = () => {
+  router.push('/register');
+};
 </script>
 
 <style scoped>
@@ -39,5 +55,13 @@ import { NCard } from 'naive-ui';
 .login-title {
   font-size: 2rem;
   color: #000;
+}
+
+.login-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
 }
 </style>
