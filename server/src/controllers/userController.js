@@ -4,17 +4,12 @@ import { User } from '../models/userModel.js';
 const SALT_ROUNDS = 10;
 
 export const register = async (req, res) => {
-    const { email, password, first_name, last_name, phone } = req.body;
-    if (!email || !password) return res.status(400).json({ message: 'Email и пароль обязательны' });
-
     try {
+        const { password, ...userData } = req.body;
         const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
         const newUser = await User.create({
-            email,
-            password_hash,
-            first_name,
-            last_name,
-            phone
+            ...userData,
+            password_hash
         });
         const { password_hash: _, ...safeUser } = newUser;
         res.status(201).json(safeUser);
@@ -53,10 +48,17 @@ export const getUserById = async (req, res) => {
 };
 
 export const updateUser = async (req, res) => {
-    const { user_id: _, ...updateData } = req.body;
-    const updated = await User.updateById(req.params.id, updateData);
-    if (!updated) return res.status(404).json({ message: 'Ошибка обновления' });
-
-    const { password_hash: __, ...safeData } = updated;
-    res.json(safeData);
+    try {
+        const updateData = { ...req.body };
+        if (updateData.password) {
+            updateData.password_hash = await bcrypt.hash(updateData.password, SALT_ROUNDS);
+            delete updateData.password;
+        }
+        const updated = await User.updateById(req.params.id, updateData);
+        if (!updated) return res.status(404).json({ message: 'Пользователь не найден' });
+        const { password_hash: __, ...safeData } = updated;
+        res.json(safeData);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
