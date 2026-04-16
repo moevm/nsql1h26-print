@@ -19,7 +19,7 @@ export const register = async (req, res) => {
             password_hash
         });
         const { password_hash: _, ...safeUser } = newUser;
-        res.status(201).json({ ...safeUser, token: generateToken(newUser.user_id, newUser.role) });
+        res.status(201).json({ user: {...safeUser}, token: generateToken(newUser.user_id, newUser.role) });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
