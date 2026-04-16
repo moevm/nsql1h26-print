@@ -37,7 +37,7 @@ export const login = async (req, res) => {
         const { password_hash, ...safeUser } = user;
 
         res.json({
-            ...safeUser,
+            user: {...safeUser},
             token: generateToken(user.user_id, user.role)
         });
     } catch (error) {
