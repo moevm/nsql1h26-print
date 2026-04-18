@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import userRoutes from './routes/userRoutes.js';
 import authRoutes from "./routes/authRoutes.js";
+import serviceRoutes from './routes/serviceRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 import driver from './config/db.js';
 import { seedDatabase } from './scripts/seeds.js';
 
@@ -15,6 +17,8 @@ app.get('/api/test', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/services', serviceRoutes);
+app.use('/api/orders', orderRoutes);
 
 const PORT = 3000;
 
