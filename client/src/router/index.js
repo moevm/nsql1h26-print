@@ -16,6 +16,12 @@ const routes = [
         name: 'register',
         component: () => import('@/pages/RegisterPage.vue'),
       },
+        {
+            path: '/account/:id',
+            name: 'profile',
+            component: () => import('@/pages/ProfilePage.vue'),
+            meta: { requiresAuth: true }
+        }
     ],
   },
 ];

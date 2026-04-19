@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "pnpm -r --parallel dev",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "docker-compose up": "docker compose up --build",
+    "dcc": "docker compose up client --build"
   },
   "keywords": [],
   "author": "",

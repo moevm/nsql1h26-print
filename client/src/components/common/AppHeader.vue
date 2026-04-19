@@ -75,8 +75,11 @@ const handleLogin = () => router.push('/login')
 const handleRegister = () => router.push('/register')
 
 const goToAccount = () => {
-  if (userStore.user?.id) {
-    router.push(`/account/${userStore.user.id}`)
+  const userId = userStore.user?.user_id;
+  if (userId) {
+    router.push(`/account/${userId}`);
+  } else {
+    router.push('/login');
   }
 }
 
