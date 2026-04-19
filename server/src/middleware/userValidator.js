@@ -1,3 +1,4 @@
+import {filterFields} from '../helpers/helpers.js';
 const allowedRoles = ['admin', 'employee', 'client'];
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^\+?[0-9]{10,15}$/;
@@ -40,18 +41,8 @@ const validateUserData = (data, isUpdate = false) => {
     return errors;
 };
 
-const filterFields = (body) => {
-    const filtered = {};
-    Object.keys(body).forEach(key => {
-        if (allowedFields.includes(key)) {
-            filtered[key] = body[key];
-        }
-    });
-    return filtered;
-};
-
 export const validateRegister = (req, res, next) => {
-    req.body = filterFields(req.body);
+    req.body = filterFields(req.body, allowedFields);
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -65,7 +56,7 @@ export const validateRegister = (req, res, next) => {
 };
 
 export const validateUpdateUser = (req, res, next) => {
-    req.body = filterFields(req.body);
+    req.body = filterFields(req.body, allowedFields);
     delete req.body.email;
 
     if (Object.keys(req.body).length === 0) {

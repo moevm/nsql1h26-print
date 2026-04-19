@@ -15,6 +15,8 @@ services:
       dockerfile: server/Dockerfile
     ports:
       - 3000:3000
+    env_file:
+      - ./server/.env
     develop:
       watch:
         - action: sync
@@ -41,9 +43,14 @@ services:
       - ./neo4j-data:/data
     healthcheck:
       test: ["CMD-SHELL", "wget http://localhost:7474 || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      interval: 10s
+      timeout: 30s
+      retries: 10
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
     networks:
       - app-network
 

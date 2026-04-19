@@ -1,3 +1,4 @@
+import {filterFields} from '../helpers/helpers.js';
 const allowedStatuses = ['pending', 'processing', 'ready', 'cancelled', 'completed'];
 const allowedFields = [
     'quantity',
@@ -10,18 +11,9 @@ const allowedFields = [
     'user_id'
 ];
 
-const filterFields = (body) => {
-    const filtered = {};
-    Object.keys(body).forEach(key => {
-        if (allowedFields.includes(key)) {
-            filtered[key] = body[key];
-        }
-    });
-    return filtered;
-};
 
 export const validateCreateOrder = (req, res, next) => {
-    req.body = filterFields(req.body);
+    req.body = filterFields(req.body, allowedFields);
     const { quantity, service_id, file_name } = req.body;
 
     const errors = [];
