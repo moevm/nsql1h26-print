@@ -13,7 +13,15 @@
       />
 
       <n-space v-else vertical size="14" class="orders-list">
-        <div v-for="order in visibleOrders" :key="order.id" class="order-item">
+        <div
+          v-for="order in visibleOrders"
+          :key="order.id"
+          class="order-item"
+          role="button"
+          tabindex="0"
+          @click="goToOrder(order.id)"
+          @keydown.enter="goToOrder(order.id)"
+        >
           <div class="order-main">Заказ №{{ order.number }} {{ order.title }}</div>
 
           <div class="status-box">
@@ -42,6 +50,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 
 const props = defineProps({
   orders: {
@@ -49,6 +58,7 @@ const props = defineProps({
     default: () => []
   }
 });
+const router = useRouter();
 
 const visibleCount = ref(5);
 
@@ -58,6 +68,11 @@ const visibleOrders = computed(() => {
 
 const showMore = () => {
   visibleCount.value += 5;
+};
+
+const goToOrder = (orderId) => {
+  if (!orderId) return;
+  router.push(`/orders/${orderId}`);
 };
 
 const getStatusMeta = (status) => {
@@ -138,6 +153,18 @@ const getStatusMeta = (status) => {
   align-items: center;
   padding: 16px 20px;
   margin: 20px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.order-item:hover {
+  background: #f2f4f7;
+  transform: translateY(-1px);
+}
+
+.order-item:focus-visible {
+  outline: 2px solid #3355ab;
+  outline-offset: 2px;
 }
 
 .order-main {
