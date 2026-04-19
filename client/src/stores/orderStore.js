@@ -30,6 +30,15 @@ export const useOrderStore = defineStore('orderStore', () => {
         return types[serviceType] || serviceType || 'Услуга';
     };
 
+    const getParamValue = (params, keys, fallback = '—') => {
+        for (const key of keys) {
+            if (params?.[key] !== undefined && params[key] !== null && params[key] !== '') {
+                return params[key];
+            }
+        }
+        return fallback;
+    };
+
     async function fetchOrders() {
         loading.value = true;
         error.value = null;
@@ -59,6 +68,7 @@ export const useOrderStore = defineStore('orderStore', () => {
 
         try {
             const { data } = await axiosInstance.get(`/orders/${id}`);
+            const params = data.parameters || {};
 
             currentOrder.value = {
                 id: data.order_id,
@@ -68,11 +78,11 @@ export const useOrderStore = defineStore('orderStore', () => {
                 total: Number(data.total_price || 0),
                 type: mapServiceTypeText(data.service_type),
                 file: data.file_name || '—',
-                format: data.format || '—',
-                comment: data.comment || '—',
-                paperType: data.paper_type || '—',
-                color: data.color || '—',
-                postProcessing: data.post_processing || '—',
+                format: getParamValue(params, ['format', 'page_format']),
+                comment: data.notes || '—',
+                paperType: getParamValue(params, ['paper_type', 'paperType']),
+                color: getParamValue(params, ['color_mode', 'colorMode', 'color']),
+                postProcessing: getParamValue(params, ['post_processing', 'postProcessing']),
                 quantity: data.quantity || 0
             };
 
