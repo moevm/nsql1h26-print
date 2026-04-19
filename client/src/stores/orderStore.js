@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia';
+﻿import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axiosInstance from '@/api/axios';
 
@@ -21,6 +21,15 @@ export const useOrderStore = defineStore('orderStore', () => {
         return statuses[status] || status;
     };
 
+    const mapServiceTypeText = (serviceType) => {
+        const types = {
+            scan: 'Сканирование',
+            print: 'Печать',
+            risography: 'Ризография'
+        };
+        return types[serviceType] || serviceType || 'Услуга';
+    };
+
     async function fetchOrders() {
         loading.value = true;
         error.value = null;
@@ -31,10 +40,11 @@ export const useOrderStore = defineStore('orderStore', () => {
             orders.value = response.data.map(item => ({
                 id: item.order_id,
                 number: item.order_id.slice(0, 8).toUpperCase(),
-                title: item.service_type === 'scan' ? 'Сканирование' : 'Ризография',
+                title: mapServiceTypeText(item.service_type),
                 status: item.status,
                 statusText: mapStatusText(item.status),
-                date: new Date(item.created_at).toLocaleDateString()
+                date: new Date(item.created_at).toLocaleDateString(),
+                totalPrice: Number(item.total_price || 0)
             }));
         } catch (err) {
             error.value = err.response?.data?.message || 'Не удалось загрузить заказы';
@@ -53,16 +63,10 @@ export const useOrderStore = defineStore('orderStore', () => {
             currentOrder.value = {
                 id: data.order_id,
                 number: `Заказ №${data.order_id.slice(0, 8).toUpperCase()}`,
-
                 status: data.status,
                 statusText: mapStatusText(data.status),
-
-                total: data.total_price,
-
-                type: data.service_type === 'scan'
-                    ? 'Сканирование'
-                    : 'Ризография',
-
+                total: Number(data.total_price || 0),
+                type: mapServiceTypeText(data.service_type),
                 file: data.file_name || '—',
                 format: data.format || '—',
                 comment: data.comment || '—',

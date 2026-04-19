@@ -1,11 +1,25 @@
 import { getSession } from '../config/db.js';
 
+const toNumeric = (value) => {
+    if (value && typeof value.toNumber === 'function') {
+        return value.toNumber();
+    }
+    return value;
+};
+
 const formatProperties = (properties) => {
     const formatted = { ...properties };
     const dateFields = ['created_at', 'deactivated_at', 'changed_at'];
+    const numberFields = ['quantity', 'file_size', 'total_price'];
+
     dateFields.forEach(field => {
         if (formatted[field] && typeof formatted[field].toString === 'function') {
             formatted[field] = formatted[field].toString();
+        }
+    });
+    numberFields.forEach(field => {
+        if (formatted[field] !== undefined && formatted[field] !== null) {
+            formatted[field] = toNumeric(formatted[field]);
         }
     });
 
@@ -24,6 +38,7 @@ export const Order = {
     create: async (userId, serviceId, orderData) => {
         const session = getSession();
         try {
+            const quantity = parseInt(orderData.quantity, 10);
             const result = await session.run(
                 `MATCH (u:User {user_id: $userId})
                  MATCH (s:Service {service_id: $serviceId})
@@ -35,19 +50,23 @@ export const Order = {
                     status: 'pending',
                     file_name: $file_name,
                     file_size: $file_size,
+                    total_price: toFloat(s.base_price) * toFloat($quantity),
                     created_at: datetime()
                  })-[:FOR_SERVICE]->(s)
                  RETURN o`,
                 {
                     userId,
                     serviceId,
-                    quantity: parseInt(orderData.quantity),
+                    quantity,
                     parameters: JSON.stringify(orderData.parameters || {}),
                     notes: orderData.notes || '',
                     file_name: orderData.file_name,
                     file_size: parseInt(orderData.file_size || 0)
                 }
             );
+            if (result.records.length === 0) {
+                throw new Error('Пользователь или услуга не найдены');
+            }
             return formatProperties(result.records[0].get('o').properties);
         } finally {
             await session.close();
@@ -113,7 +132,7 @@ export const Order = {
         try {
             const result = await session.run(
                 `MATCH (u:User)-[:PLACED_ORDER]->(o:Order {order_id: $orderId})-[:FOR_SERVICE]->(s:Service)
-                 RETURN o, u.email as user_email, s.service_type as service_name`,
+                 RETURN o, u.email as user_email, s.service_type as service_type`,
                 { orderId }
             );
             if (result.records.length === 0) return null;
@@ -122,7 +141,7 @@ export const Order = {
             return {
                 ...formatProperties(record.get('o').properties),
                 user_email: record.get('user_email'),
-                service_name: record.get('service_name')
+                service_type: record.get('service_type')
             };
         } finally {
             await session.close();
@@ -133,13 +152,20 @@ export const Order = {
         const session = getSession();
         try {
             const data = { ...updateData };
+            if (data.quantity !== undefined) {
+                data.quantity = parseInt(data.quantity, 10);
+            }
             if (data.parameters) data.parameters = JSON.stringify(data.parameters);
 
             const result = await session.run(
                 `MATCH (o:Order {order_id: $orderId})
+                 OPTIONAL MATCH (o)-[:FOR_SERVICE]->(s:Service)
                  SET o += $data
+                 FOREACH (_ IN CASE WHEN $quantityChanged THEN [1] ELSE [] END |
+                    SET o.total_price = toFloat(s.base_price) * toFloat(o.quantity)
+                 )
                  RETURN o`,
-                { orderId, data }
+                { orderId, data, quantityChanged: Object.hasOwn(data, 'quantity') }
             );
             if (result.records.length === 0) return null;
             return formatProperties(result.records[0].get('o').properties);

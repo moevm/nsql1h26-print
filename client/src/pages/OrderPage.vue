@@ -47,7 +47,7 @@ onMounted(() => {
 <style scoped>
 .order-page {
   display: flex;
-  padding: 10px;
+  padding: 40px;
 }
 
 </style>
