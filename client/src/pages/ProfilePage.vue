@@ -14,22 +14,22 @@
 
 <style scoped>
 .profile-page {
-  min-height: 100%;
   padding: 32px;
+  min-height: calc(100vh - 160px);
+  box-sizing: border-box;
+  padding-bottom: 0;
 }
 
 .profile-layout {
   max-width: 1200px;
   margin: 0 auto;
-
   display: flex;
   gap: 24px;
   align-items: flex-start;
 }
 
 .sidebar-wrapper {
-  width: 280px;
-  flex-shrink: 0;
+  width: 30%;
 }
 
 .orders-wrapper {

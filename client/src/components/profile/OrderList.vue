@@ -13,11 +13,11 @@
       />
 
       <n-space v-else vertical size="14" class="orders-list">
-        <div v-for="order in orders" :key="order.id" class="order-item">
+        <div v-for="order in visibleOrders" :key="order.id" class="order-item">
           <div class="order-main">Заказ №{{ order.number }} {{ order.title }}</div>
 
           <div class="status-box">
-            <span class="status-label">Статус:</span>
+            <span class="status-label">Статус: </span>
             <n-tag
               round
               :bordered="false"
@@ -28,22 +28,41 @@
             </n-tag>
           </div>
         </div>
+        <n-button
+            v-if="visibleCount < orders.length"
+            class="show-more-btn"
+            @click="showMore"
+        >
+          Показать ещё
+        </n-button>
       </n-space>
     </n-card>
   </div>
 </template>
 
 <script setup>
-defineProps({
+import { ref, computed } from 'vue';
+
+const props = defineProps({
   orders: {
     type: Array,
     default: () => []
   }
 });
 
+const visibleCount = ref(5);
+
+const visibleOrders = computed(() => {
+  return props.orders.slice(0, visibleCount.value);
+});
+
+const showMore = () => {
+  visibleCount.value += 5;
+};
+
 const getStatusMeta = (status) => {
   const statuses = {
-    pending: { color: '#6f6f6f', label: 'Принят' },
+    pending: { color: '#6f6f6f', label: 'В обработке' },
     accepted: { color: '#6f6f6f', label: 'Принят' },
     ready: { color: '#179c2e', label: 'Готов к выдаче' },
     completed: { color: '#e10000', label: 'Завершен' }
@@ -55,27 +74,56 @@ const getStatusMeta = (status) => {
 
 <style scoped>
 .orders-container {
-  height: 100vh;
   background-color: #D9D9D9;
   padding: 10px;
   border-radius: 30px;
-}
-.orders-header {
-  margin: 0 10px;
+  height: 100%;
+  display: flex;
 }
 
 .orders-card {
   border-radius: 20px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.orders-header {
+  margin: 0 10px;
+}
+
+.orders-list {
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.show-more-btn {
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 30px;
+  background-color: #6f6f6f;
+  color: #fff;
+  align-self: center;
+}
+
+.orders-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 8px;
 }
 
 :deep(.n-card-header),
 :deep(.n-card__content) {
-  background: #ffffff !important;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .title {
-  margin: 0 0 20px;
+  margin: 0;
   font-size: 26px;
   font-weight: 700;
   color: #111827;

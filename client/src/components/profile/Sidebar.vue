@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="sidebar-card" :bordered="false">
+  <div class="sidebar-card">
     <div class="greeting">
       <h3>
         Добро пожаловать, {{ userStore.user?.first_name || userStore.user?.email?.split('@')[0] || 'Гость' }}!
@@ -43,25 +43,26 @@ defineProps({
 
 <style scoped>
 .sidebar-card {
-  border-radius: 18px;
-  overflow: hidden;
-  height: 100vh;
   background-color: #D9D9D9;
   padding: 10px;
+  border-radius: 30px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .greeting h3 {
-  margin: 30px;
-  font-size: 25px;
-  line-height: 1.18;
+  font-size: 20px;
   font-weight: 800;
   color: #101010;
+  text-align: center;
+  margin-bottom: 40px;
 }
 
 .menu-buttons {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 44px;
 }
 
 n-button {
