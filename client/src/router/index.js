@@ -1,4 +1,5 @@
 import {createRouter, createWebHistory } from 'vue-router';
+import OrderPage from "../pages/OrderPage.vue";
 
 // Массив маршрутов для приложения
 const routes = [
@@ -16,11 +17,16 @@ const routes = [
         name: 'register',
         component: () => import('@/pages/RegisterPage.vue'),
       },
+      {
+        path: '/account/:id',
+        name: 'profile',
+        component: () => import('@/pages/ProfilePage.vue'),
+        meta: { requiresAuth: true }
+      },
         {
-            path: '/account/:id',
-            name: 'profile',
-            component: () => import('@/pages/ProfilePage.vue'),
-            meta: { requiresAuth: true }
+            path: "/orders/:id",
+            name: "order",
+            component: OrderPage
         }
     ],
   },
