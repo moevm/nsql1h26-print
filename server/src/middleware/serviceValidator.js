@@ -1,3 +1,4 @@
+import {filterFields} from '../helpers/helpers.js';
 const allowedTypes = ['scan', 'print', 'risography'];
 const allowedColors = ['color', 'bw'];
 
@@ -66,18 +67,8 @@ const validateServiceData = (data, isUpdate = false) => {
     return errors;
 };
 
-const filterFields = (body) => {
-    const filtered = {};
-    Object.keys(body).forEach(key => {
-        if (allowedFields.includes(key)) {
-            filtered[key] = body[key];
-        }
-    });
-    return filtered;
-};
-
 export const validateCreateService = (req, res, next) => {
-    req.body = filterFields(req.body);
+    req.body = filterFields(req.body, allowedFields);
     const { service_type, base_price } = req.body;
     if (!service_type || base_price === undefined) {
         return res.status(400).json({ message: 'Тип услуги и базовая цена обязательны' });
@@ -89,7 +80,7 @@ export const validateCreateService = (req, res, next) => {
 };
 
 export const validateUpdateService = (req, res, next) => {
-    req.body = filterFields(req.body);
+    req.body = filterFields(req.body, allowedFields);
     const errors = validateServiceData(req.body, true);
     if (errors.length > 0) return res.status(400).json({ errors });
 
