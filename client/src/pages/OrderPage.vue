@@ -61,7 +61,7 @@ const goBackToAccount = () => {
 .order-page {
   display: flex;
   flex-direction: column;
-  padding: 40px;
+  padding: 0 100px 0 100px;
 }
 
 .order-title-row {

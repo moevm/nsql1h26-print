@@ -11,7 +11,8 @@
         block
         strong
         round
-        @click="$router.push(`/account/${userStore.user?.user_id}/data`)"
+        :class="{ 'active-btn': activeTab === 'data' }"
+        @click="goToData"
       >
         Личные данные
       </n-button>
@@ -20,8 +21,8 @@
         block
         strong
         round
-        :type="activeTab === 'orders' ? 'default' : 'default'"
-        class="active-btn"
+        :class="{ 'active-btn': activeTab === 'orders' }"
+        @click="goToOrders"
       >
         Мои заказы
       </n-button>
@@ -30,15 +31,33 @@
 </template>
 
 <script setup>
+import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
 
 const userStore = useUserStore();
-defineProps({
+const route = useRoute();
+const router = useRouter();
+
+const props = defineProps({
   activeTab: {
     type: String,
     default: 'orders'
   }
 });
+
+const resolveUserId = () => route.params.id || userStore.user?.user_id;
+
+const goToData = () => {
+  const userId = resolveUserId();
+  if (!userId || props.activeTab === 'data') return;
+  router.push(`/account/${userId}/data`);
+};
+
+const goToOrders = () => {
+  const userId = resolveUserId();
+  if (!userId || props.activeTab === 'orders') return;
+  router.push(`/account/${userId}`);
+};
 </script>
 
 <style scoped>

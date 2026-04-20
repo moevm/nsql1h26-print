@@ -2,7 +2,7 @@
   <div class="profile-page">
     <div class="profile-layout">
       <div class="sidebar-wrapper">
-        <ProfileSidebar />
+        <ProfileSidebar active-tab="orders" />
       </div>
 
       <div class="orders-wrapper">
@@ -25,7 +25,7 @@
   margin: 0 auto;
   display: flex;
   gap: 24px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .sidebar-wrapper {
@@ -43,11 +43,9 @@ import { useRoute } from 'vue-router';
 import ProfileSidebar from '../components/profile/Sidebar.vue';
 import OrderList from '../components/profile/OrderList.vue';
 import { useOrderStore } from '../stores/orderStore';
-import { useUserStore } from '../stores/userStore';
 
 const route = useRoute();
 const orderStore = useOrderStore();
-const userStore = useUserStore();
 
 onMounted(async () => {
   const userId = route.params.id;

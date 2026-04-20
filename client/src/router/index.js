@@ -23,6 +23,12 @@ const routes = [
         component: () => import('@/pages/ProfilePage.vue'),
         meta: { requiresAuth: true }
       },
+      {
+        path: '/account/:id/data',
+        name: 'profile-data',
+        component: () => import('@/pages/ProfileDataPage.vue'),
+        meta: { requiresAuth: true }
+      },
         {
             path: "/orders/:id",
             name: "order",
