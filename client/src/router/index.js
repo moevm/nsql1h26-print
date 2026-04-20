@@ -1,21 +1,6 @@
 import {createRouter, createWebHistory } from 'vue-router';
 import { useUserStore } from '@/stores/userStore';
 
-const requireEmployee = (to, from, next) => {
-  const userStore = useUserStore();
-  
-  if (!userStore.isAuthenticated || !userStore.user?.role) {
-    return next({ name: 'login', query: { redirect: to.fullPath } });
-  }
-  
-  if (userStore.user.role !== 'employee' && userStore.user.role !== 'admin') {
-    return next({ name: 'login' });
-  }
-  
-  next();
-};
-
-
 // Массив маршрутов для приложения
 const routes = [
   {
@@ -48,16 +33,19 @@ const routes = [
     path: '/employee',
     name: 'EmployeeOrders',
     component: () => import('@/pages/employee/OrdersQueue.vue'),
-    beforeEnter: requireEmployee,
-    meta: { requiresAuth: true }
+    meta: { 
+      requiresAuth: true,
+      requiresEmployee: true 
+    }
   },
-  
   {
     path: '/order/:id',  
     name: 'OrderDetail',
     component: () => import('@/pages/employee/OrderDetail.vue'),
-    beforeEnter: requireEmployee,  
-    meta: { requiresAuth: true }
+    meta: { 
+      requiresAuth: true,
+      requiresEmployee: true
+    }
   }
 ];
 
@@ -65,4 +53,28 @@ const routes = [
 export const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+router.beforeEach((to, _, next) => {
+  const userStore = useUserStore();
+  
+  // Проверяем, требует ли маршрут авторизации
+  if (to.meta.requiresAuth) {
+    if (!userStore.isAuthenticated) {
+      // Не авторизован - отправляем на логин
+      return next({ 
+        name: 'login', 
+        query: { redirect: to.fullPath } 
+      });
+    }
+    
+    // Проверяем роль для employee маршрутов
+    if (to.meta.requiresEmployee && 
+        userStore.user?.role !== 'employee' && 
+        userStore.user?.role !== 'admin') {
+      return next({ name: 'login' });
+    }
+  }
+  
+  next();
 });
