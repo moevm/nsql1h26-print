@@ -41,12 +41,13 @@ export const useOrderStore = defineStore('orderStore', () => {
         return fallback;
     };
 
-    async function fetchOrdersByUser(userId) {
+    async function fetchOrdersByUser(userId, filters = {}) {
         loading.value = true;
         error.value = null;
 
         try {
-            const response = await axiosInstance.get(`/orders/user/${userId}`);
+            const response = await axiosInstance.get(`/orders/user/${userId}`,
+                {params: filters});
 
             orders.value = response.data.map(item => ({
                 id: item.order_id,

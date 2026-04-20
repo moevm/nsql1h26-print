@@ -6,7 +6,9 @@
       </div>
 
       <div class="orders-wrapper">
-        <OrderList :orders="orderStore.orders" />
+        <OrderList :orders="orderStore.orders"
+                   @filter="handleFilter"
+        />
       </div>
     </div>
   </div>
@@ -52,4 +54,9 @@ onMounted(async () => {
   console.log('ID профиля из URL:', userId);
   await orderStore.fetchOrdersByUser(userId);
 });
+
+const handleFilter = async (filters) => {
+  const userId = route.params.id;
+  await orderStore.fetchOrdersByUser(userId, filters);
+};
 </script>

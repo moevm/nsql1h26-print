@@ -91,7 +91,17 @@ export const Order = {
             }
 
             if (filters.service_type) {
-                clauses.push('toLower(s.service_type) CONTAINS toLower($service_type)');
+                clauses.push(`
+                    toLower(s.service_type) CONTAINS toLower($service_type)
+                    OR
+                    CASE s.service_type
+                        WHEN 'print' THEN 'печать'
+                        WHEN 'scan' THEN 'сканирование'
+                        WHEN 'risography' THEN 'ризография'
+                        ELSE ''
+                    END CONTAINS toLower($service_type)
+                `);
+
                 params.service_type = filters.service_type;
             }
 

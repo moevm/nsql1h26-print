@@ -16,9 +16,9 @@ export const createOrder = async (req, res) => {
 
 export const getOrders = async (req, res) => {
     try {
-        // if (req.user.role !== 'admin' && req.user.role !== 'employee') {
-        //     return res.status(403).json({ message: 'Доступ запрещен' });
-        // }
+        if (req.user.role !== 'admin' && req.user.role !== 'employee') {
+            return res.status(403).json({ message: 'Доступ запрещен' });
+        }
 
         const orders = await Order.find(req.query);
         res.json(orders);
@@ -44,7 +44,11 @@ export const getOrdersByUser = async (req, res) => {
             console.log(req.params);
             return res.status(403).json({ message: 'Доступ запрещён' });
         }
-        const orders = await Order.find({ userId: req.user.user_id });
+        const filters = {
+            ...req.query,
+            userId: req.user.user_id
+        };
+        const orders = await Order.find(filters);
         res.json(orders);
     } catch (error) {
         res.status(500).json({ error: error.message });

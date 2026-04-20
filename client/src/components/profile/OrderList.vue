@@ -4,7 +4,27 @@
         <div class="orders-header">
           <h2 class="title">Мои заказы</h2>
         </div>
+      <form class="filters" @submit.prevent="applyFilters">
 
+        <n-select
+            v-model:value="filters.status"
+            :options="statusOptions"
+            placeholder="Статус заказа"
+            class="filter-item"
+        />
+
+        <n-input
+            v-model:value="filters.service_type"
+            placeholder="Тип услуги"
+            clearable
+            class="filter-item"
+        />
+
+        <n-button type="primary" attr-type="submit" class="filter-btn">
+          Фильтровать
+        </n-button>
+
+      </form>
       <n-empty
         v-if="!orders.length"
         class="orders-empty"
@@ -51,6 +71,32 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import {
+  NSelect,
+  NInput,
+  NButton,
+} from 'naive-ui';
+
+const filters = ref({
+  status: null,
+  service_type: '',
+});
+
+const statusOptions = [
+  { label: 'В обработке', value: 'pending' },
+  { label: 'Принят', value: 'accepted' },
+  { label: 'Готов к выдаче', value: 'ready' },
+  { label: 'Завершен', value: 'completed' },
+  { label: 'В процессе', value: 'processing' },
+  { label: 'Отменен', value: 'cancelled' },
+  { label: 'Все', value: '' },
+];
+
+const emit = defineEmits(['filter']);
+
+const applyFilters = () => {
+  emit('filter', { ...filters.value });
+};
 
 const props = defineProps({
   orders: {
@@ -109,12 +155,6 @@ const getStatusMeta = (status) => {
   margin: 0 10px;
 }
 
-.orders-list {
-  max-height: 500px;
-  overflow-y: auto;
-  padding-right: 8px;
-}
-
 .show-more-btn {
   cursor: pointer;
   padding: 10px;
@@ -129,6 +169,7 @@ const getStatusMeta = (status) => {
   min-height: 0;
   overflow-y: auto;
   padding-right: 8px;
+  max-height: 400px;
 }
 
 :deep(.n-card-header),
@@ -183,5 +224,18 @@ const getStatusMeta = (status) => {
 .status-tag {
   font-size: 14px;
   font-weight: 600;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 10px;
+  align-items: flex-end;
+}
+
+.filter-item {
+  flex: 1;
+  min-width: 140px;
 }
 </style>
