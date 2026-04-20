@@ -50,6 +50,6 @@ const orderStore = useOrderStore();
 onMounted(async () => {
   const userId = route.params.id;
   console.log('ID профиля из URL:', userId);
-  await orderStore.fetchOrders();
+  await orderStore.fetchOrdersByUser(userId);
 });
 </script>

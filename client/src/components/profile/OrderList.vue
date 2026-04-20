@@ -30,9 +30,9 @@
               round
               :bordered="false"
               class="status-tag"
-              :style="{ color: getStatusMeta(order.status).color }"
+              :style="{ color: getStatusMeta(order.statusText).color }"
             >
-              {{ order.statusText || getStatusMeta(order.status).label }}
+              {{ order.statusText }}
             </n-tag>
           </div>
         </div>
@@ -77,10 +77,12 @@ const goToOrder = (orderId) => {
 
 const getStatusMeta = (status) => {
   const statuses = {
-    pending: { color: '#6f6f6f', label: 'В обработке' },
-    accepted: { color: '#6f6f6f', label: 'Принят' },
-    ready: { color: '#179c2e', label: 'Готов к выдаче' },
-    completed: { color: '#e10000', label: 'Завершен' }
+    'В обработке': { color: '#6f6f6f' },
+    'Принят' : { color: '#6f6f6f' },
+    'Готов к выдаче' : { color: '#179c2e' },
+    'Завершен' : { color: '#e10000' },
+    'В процессе' : {color: '#000000'},
+    'Отменен': {color: 'rgba(202,6,6,0.7)'}
   };
 
   return statuses[status] || { color: '#e10000', label: 'Неизвестно' };

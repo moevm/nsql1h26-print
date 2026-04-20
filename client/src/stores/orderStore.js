@@ -16,7 +16,9 @@ export const useOrderStore = defineStore('orderStore', () => {
             pending: 'В обработке',
             accepted: 'Принят',
             ready: 'Готов к выдаче',
-            completed: 'Завершен'
+            completed: 'Завершен',
+            cancelled: 'Отменен',
+            processing: 'В процессе'
         };
         return statuses[status] || status;
     };
@@ -38,6 +40,29 @@ export const useOrderStore = defineStore('orderStore', () => {
         }
         return fallback;
     };
+
+    async function fetchOrdersByUser(userId) {
+        loading.value = true;
+        error.value = null;
+
+        try {
+            const response = await axiosInstance.get(`/orders/user/${userId}`);
+
+            orders.value = response.data.map(item => ({
+                id: item.order_id,
+                number: item.order_id.slice(0, 8).toUpperCase(),
+                title: mapServiceTypeText(item.service_type),
+                status: item.status,
+                statusText: mapStatusText(item.status),
+                date: new Date(item.created_at).toLocaleDateString(),
+                totalPrice: Number(item.total_price || 0)
+            }));
+        } catch (err) {
+            error.value = err.response?.data?.message || 'Не удалось загрузить заказы';
+        } finally {
+            loading.value = false;
+        }
+    }
 
     async function fetchOrders() {
         loading.value = true;
@@ -98,6 +123,7 @@ export const useOrderStore = defineStore('orderStore', () => {
         loading,
         error,
         fetchOrders,
+        fetchOrdersByUser,
 
         currentOrder,
         orderLoading,

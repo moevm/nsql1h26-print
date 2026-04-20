@@ -39,7 +39,12 @@ export const getOrderById = async (req, res) => {
 
 export const getOrdersByUser = async (req, res) => {
     try {
-        const orders = await Order.find({ userId: req.params.id });
+        if (req.user.user_id !== req.params.id) {
+            console.log(req.user.user_id);
+            console.log(req.params);
+            return res.status(403).json({ message: 'Доступ запрещён' });
+        }
+        const orders = await Order.find({ userId: req.user.user_id });
         res.json(orders);
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -19,10 +19,9 @@ import PersonalDataCard from '../components/profile/PersonalDataCard.vue';
 
 <style scoped>
 .profile-page {
-  padding: 32px;
   min-height: calc(100vh - 160px);
   box-sizing: border-box;
-  padding-bottom: 0;
+  padding: 32px 32px 0;
 }
 
 .profile-layout {
