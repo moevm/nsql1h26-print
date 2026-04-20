@@ -21,12 +21,7 @@ const routes = [
         path: 'register',
         name: 'register',
         component: () => import('@/pages/RegisterPage.vue'),
-      },
-      {
-        path: '/',
-        name: 'services',
-        component: () => import('@/pages/ServicesPage.vue'),
-      },
+      }
     ],
   },
   {
@@ -72,7 +67,7 @@ router.beforeEach((to, _, next) => {
     if (to.meta.requiresEmployee && 
         userStore.user?.role !== 'employee' && 
         userStore.user?.role !== 'admin') {
-      return next({ name: 'login' });
+      return next({ name: 'home' });
     }
   }
   

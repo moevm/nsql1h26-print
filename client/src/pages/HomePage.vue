@@ -9,10 +9,7 @@
     />
     
     <!-- Для клиента -->
-    <div v-else class="client-home">
-      <h1>Добро пожаловать!</h1>
-      <p>Здесь будут услуги и ваши заказы</p>
-    </div>
+    <ServecesPage v-else class="client-home"/>
   </div>
 </template>
 
@@ -20,6 +17,7 @@
 import { ref, watch, onMounted } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import OrdersQueue from '@/pages/employee/OrdersQueue.vue';
+import ServecesPage from '@/pages/ServicesPage.vue'
 
 const userStore = useUserStore();
 const userLoaded = ref(false);
