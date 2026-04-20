@@ -1,4 +1,4 @@
-import {filterFields} from '../helpers/helpers.js';
+﻿import {filterFields} from '../helpers/helpers.js';
 const allowedStatuses = ['pending', 'processing', 'ready', 'cancelled', 'completed'];
 const allowedFields = [
     'quantity',
@@ -14,15 +14,13 @@ const allowedFields = [
 
 export const validateCreateOrder = (req, res, next) => {
     req.body = filterFields(req.body, allowedFields);
-    const { quantity, service_id, file_name } = req.body;
+    const quantity = Number(req.body.quantity);
+    const { service_id } = req.body;
 
     const errors = [];
     if (!service_id) errors.push('ID услуги (service_id) обязателен');
     if (!quantity || !Number.isInteger(quantity) || quantity <= 0) {
         errors.push('Количество должно быть целым числом больше нуля');
-    }
-    if (!file_name || file_name.length === 0) {
-        errors.push('Имя файла обязательно');
     }
 
     if (errors.length > 0) return res.status(400).json({ errors });
@@ -31,7 +29,8 @@ export const validateCreateOrder = (req, res, next) => {
 
 export const validateUpdateOrder = (req, res, next) => {
     req.body = filterFields(req.body);
-    const { status, quantity } = req.body;
+    const quantity = Number(req.body.quantity);
+    const { status } = req.body;
 
     const errors = [];
     if (status && !allowedStatuses.includes(status)) {
