@@ -22,6 +22,7 @@ export const useUserStore = defineStore('user', () => {
   const isLoading = ref(false);
 
   // Геттеры
+  const userId = computed(() => user.value?.user_id || null);
   const isAdmin = computed(() => role.value === 'admin');
   const isEmployee = computed(() => role.value === 'employee');
   const isClient = computed(() => role.value === 'client');
@@ -105,6 +106,7 @@ export const useUserStore = defineStore('user', () => {
     token,
     role,
     isLoading,
+    userId,
     isAdmin,
     isEmployee,
     isClient,

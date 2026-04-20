@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 export const seedDatabase = async () => {
     if (process.env.NODE_ENV !== 'development') return;
   
-    const session = getSession();
+    const session = getSession(); 
     try {
 
         const users = [

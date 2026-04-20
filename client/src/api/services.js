@@ -7,6 +7,16 @@ export const servicesApi = {
     return response.data;
   },
 
+  async calculatePrice(service_type, params) {
+    const response = await axiosInstance.get('/services', {
+      params: {           
+        service_type,
+        ...params
+      }
+    });
+    return response.data;    
+  },
+
   // Получить сервис по ID
   async getServiceById(id) {
     const response = await axiosInstance.get(`/services/${id}`);

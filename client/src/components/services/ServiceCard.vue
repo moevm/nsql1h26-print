@@ -23,7 +23,7 @@
         block
         size="large"
         :loading="ordering"
-        @click="handleOrder"
+        @click="goToOrder(props.service_type)"
       >
         Заказать
       </n-button>
@@ -32,10 +32,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { NCard, NButton, useNotification } from 'naive-ui';
-import { servicesApi } from '@/api/services';
-import { useUserStore } from '@/stores/userStore';
+import { useRouter } from 'vue-router'
+import { computed } from 'vue';
+import { NCard, NButton} from 'naive-ui';
+
 
 const props = defineProps({
   service_type: {
@@ -44,6 +44,7 @@ const props = defineProps({
   },
 });
 
+const router = useRouter()
 const defaultImage = '/images/default.jpg';
 
 const imageUrl = computed(() => {
@@ -54,14 +55,10 @@ const imageUrl = computed(() => {
 
 const emit = defineEmits(['order-success']);
 
-const notification = useNotification();
-const userStore = useUserStore();
-
-const ordering = ref(false);
-
-const handleOrder = async () => {
-  console.log("заказан")
-};
+const goToOrder = (serviceType) => {
+  console.log('Выбрана услуга:', serviceType)
+  router.push(`/order/new/${serviceType}`)
+}
 </script>
 
 <style scoped>

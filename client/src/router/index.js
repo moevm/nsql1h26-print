@@ -21,6 +21,21 @@ const routes = [
         path: 'register',
         name: 'register',
         component: () => import('@/pages/RegisterPage.vue'),
+      },
+      {
+        path: '/order/new/:service_type',
+        name: 'order',
+        component: () => import('@/pages/OrderPage.vue'),
+        props: true  
+      },
+      {
+        path: '/order/:id',  
+        name: 'OrderDetail',
+        component: () => import('@/pages/employee/OrderDetail.vue'),
+        meta: { 
+          requiresAuth: true,
+          requiresEmployee: true
+        }
       }
     ],
   },
@@ -33,15 +48,6 @@ const routes = [
       requiresEmployee: true 
     }
   },
-  {
-    path: '/order/:id',  
-    name: 'OrderDetail',
-    component: () => import('@/pages/employee/OrderDetail.vue'),
-    meta: { 
-      requiresAuth: true,
-      requiresEmployee: true
-    }
-  }
 ];
 
 // Создание экземпляра маршрутизатора
