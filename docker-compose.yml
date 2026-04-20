@@ -58,3 +58,6 @@ networks:
   app-network:
     driver: bridge
 
+volumes:
+  neo4j-data:
+

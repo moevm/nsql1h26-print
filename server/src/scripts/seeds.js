@@ -41,23 +41,34 @@ export const seedDatabase = async () => {
 
     
         // Услуги печати/сканирования
-        const services = [
-            { service_id: 'srv-print-bw', service_type: 'print', base_price: 5.0, color_mode: 'bw' },
-            { service_id: 'srv-print-color', service_type: 'print', base_price: 15.0, color_mode: 'color' },
-            { service_id: 'srv-scan-bw', service_type: 'scan', base_price: 3.0, color_mode: 'bw' },
-            { service_id: 'srv-scan-color', service_type: 'scan', base_price: 10.0, color_mode: 'color' },
-            { service_id: 'srv-riso-1-99', service_type: 'risography', base_price: 2.5, start_circulation: 1, end_circulation: 99 },
-            { service_id: 'srv-riso-100-499',service_type: 'risography', base_price: 2.0, start_circulation: 100, end_circulation: 499 }
-        ];
+        const result = await session.run(
+            'MATCH (s:Service) RETURN count(s) as count'
+        );
+        const serviceCount = result.records[0].get('count').toNumber();
 
-        for (const s of services) {
-            await session.run(
-                `MERGE (s:Service {service_id: $service_id})
-        SET s += $props, s.changed_at = datetime()`,
-                { service_id: s.service_id, props: s }
-            );
+        if (serviceCount === 0) {
+            // Добавляем сервисы только если их нет
+            const services = [
+                { service_type: 'print', base_price: 5.0, color_mode: 'bw' },
+                { service_type: 'print', base_price: 15.0, color_mode: 'color' },
+                { service_type: 'scan', base_price: 3.0, color_mode: 'bw' },
+                { service_type: 'scan', base_price: 10.0, color_mode: 'color' },
+                { service_type: 'risography', base_price: 2.5, start_circulation: 1, end_circulation: 99 },
+                { service_type: 'risography', base_price: 2.0, start_circulation: 100, end_circulation: 499 }
+            ];
+
+            for (const s of services) {
+                const service_id = uuidv4();
+                await session.run(
+                    `MERGE (s:Service {service_id: $service_id})
+                    SET s += $props, s.changed_at = datetime()`,
+                    { service_id: service_id, props: s }
+                );
+            }
+            console.log('Test data seeded');
+        } else {
+            console.log(`Services already exist (${serviceCount} found). Skipping seed.`);
         }
-        console.log('Test data seeded with bcrypt hashes');
     } catch (e) {
         console.error('Seed error:', e.message);
     } finally {
