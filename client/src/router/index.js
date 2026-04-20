@@ -4,7 +4,7 @@ import { useUserStore } from '@/stores/userStore';
 const requireEmployee = (to, from, next) => {
   const userStore = useUserStore();
   
-  if (!userStore.user || !userStore.user.role) {
+  if (!userStore.isAuthenticated || !userStore.user?.role) {
     return next({ name: 'login', query: { redirect: to.fullPath } });
   }
   

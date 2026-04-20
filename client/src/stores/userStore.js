@@ -1,5 +1,5 @@
+// stores/userStore.js
 import axiosInstance from '@/api/axios';
-import { useStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -15,34 +15,10 @@ class AuthError extends Error {
 export const useUserStore = defineStore('user', () => {
   const router = useRouter();
 
-  // useStorage для role (admin, employee, client)
-  const role = useStorage('userRole', null, localStorage, {
-    serializer: {
-      read: (value) => {
-        return value === 'admin' || value === 'employee' || value === 'client' ? value : null;
-      },
-      write: (value) => value ?? '',
-    },
-  });
-
-  // useStorage для user (сохраняем целиком)
-  const user = useStorage('user', null, localStorage, {
-    serializer: {
-      read: (value) => {
-        try {
-          const parsed = JSON.parse(value);
-          return parsed?.id ? parsed : null;
-        } catch {
-          return null;
-        }
-      },
-      write: (value) => JSON.stringify(value),
-    },
-  });
-
-  // useStorage для token
-  const token = useStorage('token', null, localStorage);
-
+  // Состояние (state) - теперь обычные ref, без useStorage
+  const user = ref(null);
+  const token = ref(null);
+  const role = ref(null);
   const isLoading = ref(false);
 
   // Геттеры
@@ -57,8 +33,7 @@ export const useUserStore = defineStore('user', () => {
     user.value = data.user;
     token.value = data.token;
     role.value = data.user.role;
-
-    // useStorage автоматически сохранил всё в localStorage
+    // Плагин автоматически сохранит всё в localStorage
   }
 
   async function login(email, password) {
@@ -70,6 +45,7 @@ export const useUserStore = defineStore('user', () => {
       });
 
       setUser(response.data);
+      return response.data;
     } catch (error) {
       console.error('Ошибка входа:', error);
 
@@ -94,7 +70,7 @@ export const useUserStore = defineStore('user', () => {
     isLoading.value = true;
     try {
       const response = await axiosInstance.post('/auth/register', userData);
-      console.log(response.data)
+      console.log(response.data);
       setUser(response.data);
       return response.data;
     } catch (error) {
@@ -125,9 +101,9 @@ export const useUserStore = defineStore('user', () => {
   }
 
   return {
-    role,
     user,
     token,
+    role,
     isLoading,
     isAdmin,
     isEmployee,
@@ -139,4 +115,11 @@ export const useUserStore = defineStore('user', () => {
     register,
     logout,
   };
+}, {
+  // Конфигурация persist - данные будут автоматически сохраняться в localStorage
+  persist: {
+    key: 'user-store',           // Ключ в localStorage
+    paths: ['user', 'token', 'role'], // Сохраняем только эти поля
+    storage: localStorage,       // Используем localStorage
+  }
 });
