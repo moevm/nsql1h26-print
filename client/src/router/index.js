@@ -16,6 +16,19 @@ const requireEmployee = (to, from, next) => {
   next();
 };
 
+const requireAdmin = (to, from, next) => {
+  const userStore = useUserStore();
+  
+  if (!userStore.user || !userStore.user.role) {
+    return next({ name: 'login', query: { redirect: to.fullPath } });
+  }
+  
+  if (userStore.user.role !== 'admin') {
+    return next({ name: 'home' }); // на главную?
+  }
+  
+  next();
+};
 
 // Массив маршрутов для приложения
 const routes = [
@@ -55,6 +68,14 @@ const routes = [
             name: "order",
             component: OrderPage
         }
+
+      {
+        path: 'admin/users',
+        name: 'AdminUsers',
+        component: () => import('@/pages/admin/UsersList.vue'),
+        beforeEnter: requireAdmin,
+        meta: { requiresAuth: true }
+      }
     ],
   },
   {
