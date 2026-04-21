@@ -1,18 +1,12 @@
 <template>
   <div class="home-page">
-    <!-- Ждём загрузки стора -->
-    <div v-if="!userLoaded" class="loading">Загрузка...</div>
-    
     <!-- Для админа и сотрудника -->
     <OrdersQueue 
-      v-else-if="userStore.user?.role === 'admin' || userStore.user?.role === 'employee'" 
+      v-if="userStore.isAdmin || userStore.isEmployee" 
     />
     
     <!-- Для клиента -->
-    <div v-else class="client-home">
-      <h1>Добро пожаловать!</h1>
-      <p>Здесь будут услуги и ваши заказы</p>
-    </div>
+    <ServicesPage v-else class="client-home"/>
   </div>
 </template>
 
@@ -20,6 +14,7 @@
 import { ref, watch, onMounted } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import OrdersQueue from '@/pages/employee/OrdersQueue.vue';
+import ServicesPage from '@/pages/ServicesPage.vue'
 
 const userStore = useUserStore();
 const userLoaded = ref(false);

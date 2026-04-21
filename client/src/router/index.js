@@ -1,34 +1,5 @@
 import {createRouter, createWebHistory } from 'vue-router';
-import OrderPage from "../pages/client/ClientOrderPage.vue";
 import { useUserStore } from '@/stores/userStore';
-
-const requireEmployee = (to, from, next) => {
-  const userStore = useUserStore();
-  
-  if (!userStore.isAuthenticated || !userStore.user?.role) {
-    return next({ name: 'login', query: { redirect: to.fullPath } });
-  }
-  
-  if (userStore.user.role !== 'employee' && userStore.user.role !== 'admin') {
-    return next({ name: 'login' });
-  }
-  
-  next();
-};
-
-const requireAdmin = (to, from, next) => {
-  const userStore = useUserStore();
-  
-  if (!userStore.user || !userStore.user.role) {
-    return next({ name: 'login', query: { redirect: to.fullPath } });
-  }
-  
-  if (userStore.user.role !== 'admin') {
-    return next({ name: 'home' }); // на главную?
-  }
-  
-  next();
-};
 
 // Массив маршрутов для приложения
 const routes = [
@@ -52,6 +23,13 @@ const routes = [
         component: () => import('@/pages/RegisterPage.vue'),
       },
       {
+        path: '/order/new/:service_type',
+        name: 'create-order',
+        component: () => import('@/pages/CreateOrderPage.vue'),
+        props: true,
+        meta: { requiresAuth: true }
+      },
+      {
         path: '/account/:id',
         name: 'profile',
         component: () => import('@/pages/ProfilePage.vue'),
@@ -73,17 +51,12 @@ const routes = [
         path: 'admin/users',
         name: 'AdminUsers',
         component: () => import('@/pages/admin/UsersList.vue'),
-        beforeEnter: requireAdmin,
-        meta: { requiresAuth: true }
+        meta: { 
+          requiresAuth: true,
+          requiresAdmin: true 
+        }
       }
     ],
-  },
-  {
-    path: '/employee',
-    name: 'EmployeeOrders',
-    component: () => import('@/pages/employee/OrdersQueue.vue'),
-    beforeEnter: requireEmployee,
-    meta: { requiresAuth: true }
   },
 ];
 
@@ -91,4 +64,32 @@ const routes = [
 export const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+router.beforeEach((to, _, next) => {
+  const userStore = useUserStore();
+  
+  // Проверяем, требует ли маршрут авторизации
+  if (to.meta.requiresAuth) {
+    if (!userStore.isAuthenticated) {
+      // Не авторизован - отправляем на логин
+      return next({ 
+        name: 'login', 
+        query: { redirect: to.fullPath } 
+      });
+    }
+    
+    // Проверяем роль для employee маршрутов
+    if (to.meta.requiresEmployee && 
+        !userStore.isEmployee && 
+        !userStore.isAdmin) {
+      return next({ name: 'home' });
+    }
+
+    if (to.meta.requiresAdmin && !userStore.isAdmin) {
+      return next({ name: 'home' });
+    }
+  }
+  
+  next();
 });

@@ -10,6 +10,8 @@ RUN pnpm install --frozen-lockfile --filter @nosql/server --prod
 
 COPY server ./server
 
+RUN mkdir -p ./uploads/orders && chmod 777 ./uploads/orders
+
 USER node
 
 EXPOSE 3000

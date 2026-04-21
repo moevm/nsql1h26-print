@@ -17,6 +17,8 @@ services:
       - 3000:3000
     env_file:
       - ./server/.env
+    volumes:
+      - uploads_data:/app/uploads
     develop:
       watch:
         - action: sync
@@ -40,7 +42,7 @@ services:
       - NEO4J_AUTH=neo4j/password
     restart: unless-stopped
     volumes:
-      - ./neo4j-data:/data
+      - neo4j-data:/data
     healthcheck:
       test: ["CMD-SHELL", "wget http://localhost:7474 || exit 1"]
       interval: 10s
@@ -59,5 +61,6 @@ networks:
     driver: bridge
 
 volumes:
+  uploads_data:
   neo4j-data:
 

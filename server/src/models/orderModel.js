@@ -60,7 +60,7 @@ export const Order = {
                     quantity,
                     parameters: JSON.stringify(orderData.parameters || {}),
                     notes: orderData.notes || '',
-                    file_name: orderData.file_name,
+                    file_name: orderData.file_name || '',
                     file_size: parseInt(orderData.file_size || 0)
                 }
             );

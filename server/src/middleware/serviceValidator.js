@@ -22,11 +22,6 @@ const validateServiceData = (data, isUpdate = false) => {
         end_circulation
     } = data;
 
-    if (service_type !== undefined) {
-        if (!allowedTypes.includes(service_type)) {
-            errors.push(`Недопустимый тип услуги. Разрешены: ${allowedTypes.join(', ')}`);
-        }
-    }
 
     if (base_price !== undefined) {
         if (typeof base_price !== 'number' || base_price < 0) {
