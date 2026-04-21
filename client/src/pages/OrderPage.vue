@@ -312,9 +312,8 @@ const confirmOrder = async () => {
     }
     
     // Отправляем
-    const result = await ordersApi.create(formDataSend);
-    
-    
+    const newOrder = await ordersApi.create(formDataSend);
+     
     notification.success({
       title: 'Заказ оформлен',
       content: 'Ваш заказ успешно оформлен. Ожидайте подтверждения.',
@@ -322,7 +321,7 @@ const confirmOrder = async () => {
     })
     
     // Переход на страницу заказов
-    router.push('/orders')
+    router.push(`/orders/${newOrder.order_id}`)
     
   } catch (error: any) {
     console.error('Ошибка оформления заказа:', error)
