@@ -1,4 +1,5 @@
-﻿import {filterFields} from '../helpers/helpers.js';
+﻿import { filterFields } from '../helpers/helpers.js';
+
 const allowedStatuses = ['pending', 'processing', 'ready', 'cancelled', 'completed'];
 const allowedFields = [
     'quantity',
@@ -11,7 +12,6 @@ const allowedFields = [
     'user_id'
 ];
 
-
 export const validateCreateOrder = (req, res, next) => {
     req.body = filterFields(req.body, allowedFields);
     const quantity = Number(req.body.quantity);
@@ -19,11 +19,12 @@ export const validateCreateOrder = (req, res, next) => {
 
     const errors = [];
     if (!service_id) errors.push('ID услуги (service_id) обязателен');
-    if (!quantity || !Number.isInteger(quantity) || quantity <= 0) {
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
         errors.push('Количество должно быть целым числом больше нуля');
     }
 
     if (errors.length > 0) return res.status(400).json({ errors });
+    req.body.quantity = parsedQuantity;
     next();
 };
 
@@ -41,5 +42,8 @@ export const validateUpdateOrder = (req, res, next) => {
     }
 
     if (errors.length > 0) return res.status(400).json({ errors });
+    if (parsedQuantity !== undefined) {
+        req.body.quantity = parsedQuantity;
+    }
     next();
 };
