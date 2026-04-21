@@ -274,7 +274,7 @@ watch(() => [filters.value.orderId, filters.value.status, filters.value.serviceT
   visibleCount.value = 5;
 }, { deep: true });
 
-const viewOrder = (id) => router.push(`/order/${id}`);
+const viewOrder = (id) => router.push(`/orders/${id}`);
 const loadMore = () => { visibleCount.value += 5; };
 
 onMounted(loadOrders);
