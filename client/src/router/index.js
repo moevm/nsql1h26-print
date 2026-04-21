@@ -1,4 +1,5 @@
 import {createRouter, createWebHistory } from 'vue-router';
+import OrderPage from "../pages/client/ClientOrderPage.vue";
 import { useUserStore } from '@/stores/userStore';
 
 const requireEmployee = (to, from, next) => {
@@ -50,7 +51,24 @@ const routes = [
         name: 'register',
         component: () => import('@/pages/RegisterPage.vue'),
       },
-
+      {
+        path: '/account/:id',
+        name: 'profile',
+        component: () => import('@/pages/ProfilePage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/account/:id/data',
+        name: 'profile-data',
+        component: () => import('@/pages/ProfileDataPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: "/orders/:id",
+        name: "order",
+        component: () => import('@/pages/OrderPage.vue'),
+        meta: { requiresAuth: true }
+      },
       {
         path: 'admin/users',
         name: 'AdminUsers',
@@ -67,14 +85,6 @@ const routes = [
     beforeEnter: requireEmployee,
     meta: { requiresAuth: true }
   },
-  
-  {
-    path: '/order/:id',  
-    name: 'OrderDetail',
-    component: () => import('@/pages/employee/OrderDetail.vue'),
-    beforeEnter: requireEmployee,  
-    meta: { requiresAuth: true }
-  }
 ];
 
 // Создание экземпляра маршрутизатора
