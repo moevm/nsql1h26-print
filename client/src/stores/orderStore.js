@@ -32,6 +32,14 @@ export const useOrderStore = defineStore('orderStore', () => {
         return types[serviceType] || serviceType || 'Услуга';
     };
 
+    const mapColorModeText = (colorMode) => {
+        const modes = {
+            color: 'Цветная',
+            bw: 'Чёрно-белая'
+        };
+        return modes[colorMode] || colorMode || '—';
+    };
+
     const getParamValue = (params, keys, fallback = '—') => {
         for (const key of keys) {
             if (params?.[key] !== undefined && params[key] !== null && params[key] !== '') {
@@ -107,8 +115,7 @@ export const useOrderStore = defineStore('orderStore', () => {
                 format: getParamValue(params, ['format', 'page_format']),
                 comment: data.notes || '—',
                 paperType: getParamValue(params, ['paper_type', 'paperType']),
-                color: getParamValue(params, ['color_mode', 'colorMode', 'color']),
-                postProcessing: getParamValue(params, ['post_processing', 'postProcessing']),
+                color: mapColorModeText(getParamValue(params, ['color_mode', 'colorMode', 'color'])),                postProcessing: getParamValue(params, ['post_processing', 'postProcessing']),
                 quantity: data.quantity || 0
             };
 

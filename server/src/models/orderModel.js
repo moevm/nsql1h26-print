@@ -59,7 +59,9 @@ export const Order = {
                     userId,
                     serviceId,
                     quantity,
-                    parameters: JSON.stringify(orderData.parameters || {}),
+                    parameters: typeof orderData.parameters === 'string'
+                        ? orderData.parameters
+                        : JSON.stringify(orderData.parameters || {}),
                     notes: orderData.notes || '',
                     file_name: orderData.file_name || '',
                     file_size: parseInt(orderData.file_size || 0),
