@@ -1,5 +1,5 @@
 import { getSession } from '../config/db.js';
-import { v4 as uuidv4 } from 'uuid'; // npm install uuid
+import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs'; 
 
 export const seedDatabase = async () => {

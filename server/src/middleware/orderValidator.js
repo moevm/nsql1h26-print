@@ -19,12 +19,11 @@ export const validateCreateOrder = (req, res, next) => {
 
     const errors = [];
     if (!service_id) errors.push('ID услуги (service_id) обязателен');
-    if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
+    if (!quantity || !Number.isInteger(quantity) || quantity <= 0) {
         errors.push('Количество должно быть целым числом больше нуля');
     }
 
     if (errors.length > 0) return res.status(400).json({ errors });
-    req.body.quantity = parsedQuantity;
     next();
 };
 
@@ -42,8 +41,5 @@ export const validateUpdateOrder = (req, res, next) => {
     }
 
     if (errors.length > 0) return res.status(400).json({ errors });
-    if (parsedQuantity !== undefined) {
-        req.body.quantity = parsedQuantity;
-    }
     next();
 };

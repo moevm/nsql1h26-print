@@ -1,5 +1,4 @@
 import {createRouter, createWebHistory } from 'vue-router';
-import OrderPage from "../pages/client/ClientOrderPage.vue";
 import { useUserStore } from '@/stores/userStore';
 
 // Массив маршрутов для приложения
@@ -25,11 +24,12 @@ const routes = [
       },
       {
         path: '/order/new/:service_type',
-        name: 'order',
+        name: 'create-order',
         component: () => import('@/pages/CreateOrderPage.vue'),
-        props: true  
+        props: true,
+        meta: { requiresAuth: true }
       },
-      }
+      {
         path: '/account/:id',
         name: 'profile',
         component: () => import('@/pages/ProfilePage.vue'),
@@ -51,19 +51,12 @@ const routes = [
         path: 'admin/users',
         name: 'AdminUsers',
         component: () => import('@/pages/admin/UsersList.vue'),
-        beforeEnter: requireAdmin,
-        meta: { requiresAuth: true }
+        meta: { 
+          requiresAuth: true,
+          requiresAdmin: true 
+        }
       }
     ],
-  },
-  {
-    path: '/employee',
-    name: 'EmployeeOrders',
-    component: () => import('@/pages/employee/OrdersQueue.vue'),
-    meta: { 
-      requiresAuth: true,
-      requiresEmployee: true 
-    }
   },
 ];
 
@@ -88,8 +81,12 @@ router.beforeEach((to, _, next) => {
     
     // Проверяем роль для employee маршрутов
     if (to.meta.requiresEmployee && 
-        userStore.user?.role !== 'employee' && 
-        userStore.user?.role !== 'admin') {
+        !userStore.isEmployee && 
+        !userStore.isAdmin) {
+      return next({ name: 'home' });
+    }
+
+    if (to.meta.requiresAdmin && !userStore.isAdmin) {
       return next({ name: 'home' });
     }
   }
