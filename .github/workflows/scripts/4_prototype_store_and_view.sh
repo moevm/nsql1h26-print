@@ -22,7 +22,7 @@ build_docker_compose() {
 }
 
 run_docker_compose() {
-    docker compose up
+    docker compose up -d
 }
 
 check_tag() {
