@@ -8,6 +8,7 @@ const allowedFields = [
     'status',
     'file_name',
     'file_size',
+    'file_pages',
     'service_id',
     'user_id'
 ];
