@@ -28,7 +28,7 @@ export const validateCreateOrder = (req, res, next) => {
 };
 
 export const validateUpdateOrder = (req, res, next) => {
-    req.body = filterFields(req.body);
+    req.body = filterFields(req.body, allowedFields);
     const quantity = Number(req.body.quantity);
     const { status } = req.body;
 
@@ -36,7 +36,7 @@ export const validateUpdateOrder = (req, res, next) => {
     if (status && !allowedStatuses.includes(status)) {
         errors.push(`Недопустимый статус. Разрешены: ${allowedStatuses.join(', ')}`);
     }
-    if (quantity !== undefined && (!Number.isInteger(quantity) || quantity <= 0)) {
+    if (quantity && (!Number.isInteger(quantity) || quantity <= 0)) {
         errors.push('Количество должно быть целым числом больше нуля');
     }
 
