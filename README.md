@@ -16,3 +16,17 @@
 <a href=" ./../../../actions/workflows/6_report.yml" >![6. Пояснительная записка]( ./../../actions/workflows/6_report.yml/badge.svg)</a>
 
 <a href=" ./../../../actions/workflows/7_app_is_ready.yml" >![7. App is ready]( ./../../actions/workflows/7_app_is_ready.yml/badge.svg)</a>
+
+
+## Отладочные пользователи    
+**Клиент:**  
+Email: client@print.local  
+Пароль: client123
+
+**Админ:**  
+Email: admin@print.local  
+Пароль: admin123
+
+**Сотрудник:**  
+Email: emp@print.local  
+Пароль: emp123
