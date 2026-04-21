@@ -25,7 +25,7 @@ const routes = [
       {
         path: '/order/new/:service_type',
         name: 'order',
-        component: () => import('@/pages/OrderPage.vue'),
+        component: () => import('@/pages/CreateOrderPage.vue'),
         props: true  
       },
       {
