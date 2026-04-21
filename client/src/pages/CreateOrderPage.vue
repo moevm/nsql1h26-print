@@ -134,6 +134,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { PDFDocument } from 'pdf-lib';
 import { ordersApi } from '@/api/orders'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -171,14 +172,36 @@ const router = useRouter()
 const notification = useNotification()
 
 // Refs
-const uploadedFile = ref<File | null>(null)
-const calculatedCost = ref<number | null>(null)
+const uploadedFile = ref<null>(null)
+const calculatedCost = ref<null>(null)
 const isLoading = ref(false)
 const isSubmitting = ref(false)
 const comment = ref('')
 const showConfirmModal = ref(false)
 const serviceData = ref(null);
+const pageCount = ref(null); 
+const isCalculatingPages = ref(false);
 
+// Функция получения количества страниц из PDF
+const getPageCountFromPdf = async (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onloadend = async () => {
+      try {
+        const arrayBuffer = reader.result;
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        const pages = pdfDoc.getPageCount();
+        resolve(pages);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = (error) => reject(error);
+    reader.readAsArrayBuffer(file);
+  });
+};
 // Данные формы
 const formData = reactive({
   service_type: props.service_type,
@@ -235,13 +258,43 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-const handleFileUpload = (options: { file: { file: File } }) => {
-  const file = options.file.file
+const handleFileUpload = async (options) => {
+  const file = options.file.file;
   if (file) {
-    uploadedFile.value = file
-    onFormChange()
+    uploadedFile.value = file;
+    pageCount.value = null;
+    
+    // Проверяем, что это PDF
+    if (file.type === 'application/pdf') {
+      isCalculatingPages.value = true;
+      try {
+        const pages = await getPageCountFromPdf(file);
+        pageCount.value = pages;
+        console.log('Количество страниц:', pages);
+        
+        notification.success({
+          title: 'PDF загружен',
+          content: `Количество страниц: ${pages}`,
+          duration: 3000
+        });
+      } catch (error) {
+        console.error('Ошибка чтения PDF:', error);
+        notification.error({
+          title: 'Ошибка',
+          content: 'Не удалось прочитать PDF файл',
+          duration: 5000
+        });
+      } finally {
+        isCalculatingPages.value = false;
+      }
+    } else {
+      // Для изображений
+      console.log('Загружено изображение:', file.name);
+      pageCount.value = 1;
+    }
+    onFormChange();
   }
-}
+};
 
 const removeFile = () => {
   uploadedFile.value = null
@@ -265,7 +318,12 @@ const calculateCost = async () => {
     
     const result = await servicesApi.calculatePrice(props.service_type, params);
     serviceData.value = Array.isArray(result) ? result[0] : result;
-    calculatedCost.value = serviceData.value.base_price * formData.quantity;
+
+    if (pageCount.value && pageCount.value > 0) {
+      calculatedCost.value = serviceData.value.base_price * pageCount.value * formData.quantity;
+    } else {
+      calculatedCost.value = serviceData.value.base_price * formData.quantity;
+    }
     
     notification.success({
       title: 'Успешно',
@@ -309,6 +367,7 @@ const confirmOrder = async () => {
         formDataSend.append('file', uploadedFile.value);
         formDataSend.append('file_name', uploadedFile.value.name);
         formDataSend.append('file_size', uploadedFile.value.size.toString());
+        formDataSend.append('file_pages', pageCount.value);
     }
     
     // Отправляем

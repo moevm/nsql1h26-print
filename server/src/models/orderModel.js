@@ -10,7 +10,7 @@ const toNumeric = (value) => {
 const formatProperties = (properties) => {
     const formatted = { ...properties };
     const dateFields = ['created_at', 'deactivated_at', 'changed_at'];
-    const numberFields = ['quantity', 'file_size', 'total_price'];
+    const numberFields = ['quantity', 'file_size', 'total_price', 'file_pages'];
 
     dateFields.forEach(field => {
         if (formatted[field] && typeof formatted[field].toString === 'function') {
@@ -50,7 +50,8 @@ export const Order = {
                     status: 'pending',
                     file_name: $file_name,
                     file_size: $file_size,
-                    total_price: toFloat(s.base_price) * toFloat($quantity),
+                    file_pages: $file_pages,
+                    total_price: toFloat(s.base_price) * toFloat($quantity) * toInteger($file_pages),
                     created_at: datetime()
                  })-[:FOR_SERVICE]->(s)
                  RETURN o`,
@@ -58,10 +59,13 @@ export const Order = {
                     userId,
                     serviceId,
                     quantity,
-                    parameters: JSON.stringify(orderData.parameters || {}),
+                    parameters: typeof orderData.parameters === 'string'
+                        ? orderData.parameters
+                        : JSON.stringify(orderData.parameters || {}),
                     notes: orderData.notes || '',
                     file_name: orderData.file_name || '',
-                    file_size: parseInt(orderData.file_size || 0)
+                    file_size: parseInt(orderData.file_size || 0),
+                    file_pages: parseInt(orderData.file_pages || 0)
                 }
             );
             if (result.records.length === 0) {
