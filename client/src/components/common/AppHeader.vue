@@ -40,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { NLayoutHeader, NMenu, NButton, NText } from 'naive-ui'
 import { useUserStore } from '@/stores/userStore'
@@ -51,16 +51,18 @@ const userStore = useUserStore()
 
 const activeTab = ref('home')
 
-const menuOptions = [
-  {
-    label: 'Главная',
-    key: 'home',
-  },
-  {
-    label: 'Цены',
-    key: 'prices',
+const menuOptions = computed(() => {
+  const baseOptions = [
+    { label: 'Главная', key: 'home' },
+    { label: 'Цены', key: 'prices' }
+  ]
+  
+  if (userStore.user?.role === 'admin') {
+    baseOptions.push({ label: 'Пользователи', key: 'admin-users' })
   }
-]
+  
+  return baseOptions
+})
 
 // Обработка выбора пункта меню
 const handleMenuSelect = (key) => {
@@ -68,6 +70,8 @@ const handleMenuSelect = (key) => {
     router.push('/')
   } else if (key === 'prices') {
     router.push('/prices')
+  } else if (key === 'admin-users') { 
+    router.push('/admin/users')
   }
 }
 
@@ -90,6 +94,8 @@ const syncActiveTab = () => {
     activeTab.value = 'home'
   } else if (route.path === '/prices') {
     activeTab.value = 'prices'
+  } else if (route.path === '/admin/users') {
+    activeTab.value = 'admin-users'
   }
 }
 
