@@ -54,7 +54,7 @@ const activeTab = ref('home')
 const menuOptions = computed(() => {
   const baseOptions = [
     { label: 'Главная', key: 'home' },
-    { label: 'Цены', key: 'prices' }
+//   { label: 'Цены', key: 'prices' }
   ]
   
   if (userStore.user?.role === 'admin') {
@@ -89,7 +89,6 @@ const goToAccount = () => {
 
 const handleLogout = async () => {
   await userStore.logout()
-  // userStore.logout уже делает редирект на /login
 }
 
 const syncActiveTab = () => {

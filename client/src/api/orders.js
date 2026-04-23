@@ -18,6 +18,13 @@ export const ordersApi = {
   getById(orderId) {
     return axiosInstance.get(`/orders/${orderId}`).then(res => res.data);
   },
+
+  getUserOrders: async (userId, filters = {}) => {
+    const response = await axiosInstance.get(`/orders/user/${userId}`, {
+      params: filters
+    });
+    return response.data;
+  },
   
   // Обновить заказ (статус)
   update(orderId, data) {
@@ -29,12 +36,18 @@ export const ordersApi = {
     console.log(userStore.user);
     // Добавляем user_id к данным формы
     orderData.append('user_id', userStore.userId.toString());
-    console.log(userStore.user);
     const response = await axiosInstance.post('/orders', orderData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     });
     return response.data;
+  },
+
+  getFile: async (orderId) => {
+    const response = await axiosInstance.get(`/orders/${orderId}/file`, {
+      responseType: 'blob'  
+    });
+    return response;
   }
 };

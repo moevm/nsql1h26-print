@@ -35,12 +35,12 @@
       <n-space v-else vertical size="14" class="orders-list">
         <div
           v-for="order in visibleOrders"
-          :key="order.id"
+          :key="order.order_id"
           class="order-item"
           role="button"
           tabindex="0"
-          @click="goToOrder(order.id)"
-          @keydown.enter="goToOrder(order.id)"
+          @click="goToOrder(order.order_id)"
+          @keydown.enter="goToOrder(order.order_id)"
         >
           <div class="order-main">Заказ №{{ order.number }} {{ order.title }}</div>
 
@@ -117,6 +117,7 @@ const showMore = () => {
 };
 
 const goToOrder = (orderId) => {
+  console.log(orderId);
   if (!orderId) return;
   router.push(`/orders/${orderId}`);
 };

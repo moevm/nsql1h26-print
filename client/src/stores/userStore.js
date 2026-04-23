@@ -1,4 +1,3 @@
-// stores/userStore.js
 import axiosInstance from '@/api/axios';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
