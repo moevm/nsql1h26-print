@@ -32,7 +32,7 @@
       <p><strong>Количество страниц:</strong> {{ order.file_pages }}</p>
       <p><strong>Комментарий:</strong> {{ order.notes }}</p>
       <p><strong>Цветность:</strong> {{ order.color }}</p>
-      <p><strong>Количество:</strong> {{ order.quantity }}</p>
+      <p><strong>Количество копий:</strong> {{ order.quantity }}</p>
   
     </div>
   </div>
