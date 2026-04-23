@@ -17,12 +17,20 @@
       <hr />
 
       <p><strong>Тип:</strong> {{ order.type }}</p>
-      <p><strong>Файл:</strong> {{ order.file }}</p>
+      <p>
+        <strong>Файл: </strong>
+        <a 
+          v-if="order.file && order.file !== '—'"
+          href="#"
+          @click.prevent="viewFile"
+        >
+          {{ order.originalFileName || order.file }}
+        </a>
+        <span v-else>—</span>
+      </p>
       <p><strong>Формат:</strong> {{ order.format }}</p>
       <p><strong>Комментарий:</strong> {{ order.comment }}</p>
-      <p><strong>Тип бумаги:</strong> {{ order.paperType }}</p>
       <p><strong>Цветность:</strong> {{ order.color }}</p>
-      <p><strong>Постпечатная обработка:</strong> {{ order.postProcessing }}</p>
       <p><strong>Количество:</strong> {{ order.quantity }}</p>
     </div>
   </div>
@@ -33,6 +41,7 @@ import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useOrderStore } from '@/stores/orderStore';
 import { useUserStore } from '@/stores/userStore';
+import { ordersApi } from '@/api/orders';
 
 const route = useRoute();
 const router = useRouter();
@@ -55,6 +64,20 @@ const goBackToAccount = () => {
   }
   router.back();
 };
+
+const viewFile = async () => {
+  try {
+    const response = await ordersApi.getFile(route.params.id);
+    
+    // Создаем blob URL для просмотра
+    const blob = response.data;
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error) {
+    console.error('Ошибка при открытии файла:', error);
+  }
+}
 </script>
 
 <style scoped>

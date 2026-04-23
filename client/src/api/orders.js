@@ -29,12 +29,18 @@ export const ordersApi = {
     console.log(userStore.user);
     // Добавляем user_id к данным формы
     orderData.append('user_id', userStore.userId.toString());
-    console.log(userStore.user);
     const response = await axiosInstance.post('/orders', orderData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     });
     return response.data;
+  },
+
+  getFile: async (orderId) => {
+    const response = await axiosInstance.get(`/orders/${orderId}/file`, {
+      responseType: 'blob'  
+    });
+    return response;
   }
 };

@@ -37,7 +37,6 @@ export const getFile = async (req, res) => {
             return res.status(404).json({ message: 'Файл удален' });
         }
         
-        // Отправляем файл
         res.sendFile(filePath);
     } catch (error) {
         res.status(500).json({ error: error.message });
