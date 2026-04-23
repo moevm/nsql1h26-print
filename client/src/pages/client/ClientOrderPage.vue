@@ -30,15 +30,16 @@
       </p>
       <p><strong>Формат:</strong> {{ order.format }}</p>
       <p><strong>Количество страниц:</strong> {{ order.file_pages }}</p>
-      <p><strong>Комментарий:</strong> {{ order.comment }}</p>
+      <p><strong>Комментарий:</strong> {{ order.notes }}</p>
       <p><strong>Цветность:</strong> {{ order.color }}</p>
       <p><strong>Количество:</strong> {{ order.quantity }}</p>
+  
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useOrderStore } from '@/stores/orderStore';
 import { useUserStore } from '@/stores/userStore';
@@ -49,12 +50,36 @@ const router = useRouter();
 const orderStore = useOrderStore();
 const userStore = useUserStore();
 
-const order = computed(() => orderStore.currentOrder);
-const orderLoading = computed(() => orderStore.orderLoading);
-const orderError = computed(() => orderStore.orderError);
+const order = ref(null);
+const orderLoading = ref(false);
+const orderError = ref(null);
 
-onMounted(() => {
-  orderStore.fetchOrderById(route.params.id);
+onMounted(async () => {
+    orderLoading.value = true;
+    orderError.value = null;
+    
+    try {
+      const data = await ordersApi.getById(route.params.id);
+      order.value = {
+        ...data,
+        number: `Заказ №${data.order_id.slice(0, 8).toUpperCase()}`,
+        statusText: orderStore.mapStatusText(data.status),
+        type: orderStore.mapServiceTypeText(data.service_type),
+        total: Number(data.total_price || 0),
+        file_name: data.file_name || '—',
+        quantity: data.quantity || 0,
+        notes: data.notes || '—',
+        format: orderStore.getParamValue(data.parameters, ['format', 'page_format']),
+        color: orderStore.mapColorModeText(
+            orderStore.getParamValue(data.parameters, ['color_mode', 'colorMode', 'color'])
+        ),
+      };
+    } catch (error) {
+      console.error('Ошибка загрузки заказа:', error);
+      orderError.value = error.response?.data?.message || 'Не удалось загрузить заказ';
+    } finally {
+      orderLoading.value = false;
+    }
 });
 
 const goBackToAccount = () => {

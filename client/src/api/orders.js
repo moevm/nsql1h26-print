@@ -18,6 +18,13 @@ export const ordersApi = {
   getById(orderId) {
     return axiosInstance.get(`/orders/${orderId}`).then(res => res.data);
   },
+
+  getUserOrders: async (userId, filters = {}) => {
+    const response = await axiosInstance.get(`/orders/user/${userId}`, {
+      params: filters
+    });
+    return response.data;
+  },
   
   // Обновить заказ (статус)
   update(orderId, data) {
