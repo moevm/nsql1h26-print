@@ -33,7 +33,9 @@
       <p><strong>Комментарий:</strong> {{ order.notes }}</p>
       <p><strong>Цветность:</strong> {{ order.color }}</p>
       <p><strong>Количество копий:</strong> {{ order.quantity }}</p>
-  
+      <p v-if="order.service_type === 'scan'">
+        <strong>Качество скана:</strong> {{ order.quality }}
+      </p>
     </div>
   </div>
 </template>
@@ -73,6 +75,7 @@ onMounted(async () => {
         color: orderStore.mapColorModeText(
             orderStore.getParamValue(data.parameters, ['color_mode', 'colorMode', 'color'])
         ),
+        quality: orderStore.mapScanQualityText(orderStore.getParamValue(data.parameters, ['quality', 'quality']))
       };
     } catch (error) {
       console.error('Ошибка загрузки заказа:', error);

@@ -30,6 +30,14 @@ export const useOrderStore = defineStore('orderStore', () => {
         return modes[colorMode] || colorMode || '—';
     };
 
+    const mapScanQualityText = (quality) => {
+        const map = {
+            high: 'Сохранить качество',
+            compressed: 'Сжать файл'
+        };
+        return map[quality] || quality || '—';
+    };
+
     const getParamValue = (params, keys, fallback = '—') => {
         for (const key of keys) {
             if (params?.[key] !== undefined && params[key] !== null && params[key] !== '') {
@@ -43,6 +51,7 @@ export const useOrderStore = defineStore('orderStore', () => {
         mapStatusText,
         mapServiceTypeText,
         mapColorModeText,
+        mapScanQualityText,
         getParamValue,
     };
 });
