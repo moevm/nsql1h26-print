@@ -11,7 +11,8 @@ const allowedFields = [
     'file_pages',
     'service_id',
     'user_id',
-    'quality'
+    'quality',
+    'time_slot'
 ];
 
 export const validateCreateOrder = (req, res, next) => {

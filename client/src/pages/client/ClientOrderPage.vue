@@ -13,7 +13,10 @@
       <p><strong>Дата оформления:</strong> {{ formatDate(order.created_at) }}</p>
       <p><strong>Статус:</strong> {{ order.statusText }}</p>
       <p><strong>Итого:</strong> {{ order.total }} руб</p>
-
+      <p v-if="order.service_type === 'scan'">
+        <strong>Время посещения:</strong>
+        {{ order.time_slot }}
+      </p>
       <hr />
 
       <p><strong>Тип:</strong> {{ order.type }}</p>
@@ -75,7 +78,8 @@ onMounted(async () => {
         color: orderStore.mapColorModeText(
             orderStore.getParamValue(data.parameters, ['color_mode', 'colorMode', 'color'])
         ),
-        quality: orderStore.mapScanQualityText(orderStore.getParamValue(data.parameters, ['quality', 'quality']))
+        quality: orderStore.mapScanQualityText(orderStore.getParamValue(data.parameters, ['quality'])),
+        time_slot: orderStore.getParamValue(data.parameters, ['time_slot'])
       };
     } catch (error) {
       console.error('Ошибка загрузки заказа:', error);
