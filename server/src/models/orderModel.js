@@ -10,8 +10,7 @@ const toNumeric = (value) => {
 const formatProperties = (properties) => {
     const formatted = { ...properties };
     const dateFields = ['created_at', 'deactivated_at', 'changed_at'];
-    const numberFields = ['quantity', 'file_size', 'total_price', 'file_pages'];
-
+    const numberFields = ['quantity', 'file_size', 'file_pages', 'base_price'];
     dateFields.forEach(field => {
         if (formatted[field] && typeof formatted[field].toString === 'function') {
             formatted[field] = formatted[field].toString();
@@ -42,19 +41,19 @@ export const Order = {
             const result = await session.run(
                 `MATCH (u:User {user_id: $userId})
                  MATCH (s:Service {service_id: $serviceId})
-                 CREATE (u)-[:PLACED_ORDER]->(o:Order {
-                    order_id: randomUUID(),
-                    quantity: $quantity,
-                    parameters: $parameters,
-                    notes: $notes,
-                    status: 'pending',
-                    file_name: $file_name,
-                    file_size: $file_size,
-                    file_pages: $file_pages,
-                    total_price: toFloat(s.base_price) * toFloat($quantity) * toInteger($file_pages),
-                    created_at: datetime()
-                 })-[:FOR_SERVICE]->(s)
-                 RETURN o`,
+                CREATE (u)-[:PLACED_ORDER]->(o:Order {
+                   order_id: randomUUID(),
+                   quantity: $quantity,
+                   parameters: $parameters,
+                   notes: $notes,
+                   status: 'pending',
+                   file_name: $file_name,
+                   file_size: $file_size,
+                   file_pages: $file_pages,
+                   base_price: toFloat(s.base_price),
+                   created_at: datetime()
+                })-[:FOR_SERVICE]->(s)
+                RETURN o, o.base_price * o.quantity * o.file_pages AS total_amount`,
                 {
                     userId,
                     serviceId,
@@ -71,7 +70,10 @@ export const Order = {
             if (result.records.length === 0) {
                 throw new Error('Пользователь или услуга не найдены');
             }
-            return formatProperties(result.records[0].get('o').properties);
+            return {
+                ...formatProperties(result.records[0].get('o').properties),
+                total_amount: toNumeric(result.records[0].get('total_amount'))
+            };
         } finally {
             await session.close();
         }
@@ -122,11 +124,12 @@ export const Order = {
                 query += ' WHERE ' + clauses.join(' AND ');
             }
 
-            query += ` RETURN o, 
-                       u.email as user_email, 
-                       u.user_id as user_id, 
-                       s.service_type as service_type 
-                       ORDER BY o.created_at DESC`;
+            query += ` RETURN o,
+                   u.email as user_email,
+                   u.user_id as user_id,
+                   s.service_type as service_type,
+                   o.base_price * o.quantity * o.file_pages AS total_amount
+                   ORDER BY o.created_at DESC`;
 
             const result = await session.run(query, params);
 
@@ -134,7 +137,8 @@ export const Order = {
                 ...formatProperties(record.get('o').properties),
                 user_email: record.get('user_email'),
                 user_id: record.get('user_id'),
-                service_type: record.get('service_type')
+                service_type: record.get('service_type'),
+                total_amount: toNumeric(record.get('total_amount'))
             }));
         } finally {
             await session.close();
@@ -146,7 +150,8 @@ export const Order = {
         try {
             const result = await session.run(
                 `MATCH (u:User)-[:PLACED_ORDER]->(o:Order {order_id: $orderId})-[:FOR_SERVICE]->(s:Service)
-                 RETURN o, u.email as user_email, s.service_type as service_type`,
+                 RETURN o, u.email as user_email, s.service_type as service_type, 
+                 o.base_price * o.quantity * o.file_pages AS total_amount`,
                 { orderId }
             );
             if (result.records.length === 0) return null;
@@ -155,7 +160,8 @@ export const Order = {
             return {
                 ...formatProperties(record.get('o').properties),
                 user_email: record.get('user_email'),
-                service_type: record.get('service_type')
+                service_type: record.get('service_type'),
+                total_amount: toNumeric(record.get('total_amount'))
             };
         } finally {
             await session.close();

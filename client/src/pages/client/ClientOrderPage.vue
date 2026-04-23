@@ -65,7 +65,7 @@ onMounted(async () => {
         number: `Заказ №${data.order_id.slice(0, 8).toUpperCase()}`,
         statusText: orderStore.mapStatusText(data.status),
         type: orderStore.mapServiceTypeText(data.service_type),
-        total: Number(data.total_price || 0),
+        total: Number(data.total_amount || 0),
         file_name: data.file_name || '—',
         quantity: data.quantity || 0,
         notes: data.notes || '—',
