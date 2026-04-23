@@ -1,13 +1,44 @@
+import path from 'path';
+import fs from 'fs';
 import { Order } from '../models/orderModel.js';
 
 export const createOrder = async (req, res) => {
     try {
         const {user_id, service_id, ...orderData } = req.body;
+        const file = req.file;
         if (!service_id) {
             return res.status(400).json({ message: 'service_id обязателен' });
         }
-        const newOrder = await Order.create(user_id, service_id, orderData);
+
+        const orderWithFile = {
+            ...orderData,
+            file_name: file?.filename,
+            file_original_name: file?.originalname,
+            file_path: file?.path
+        };
+        const newOrder = await Order.create(user_id, service_id, orderWithFile);
         res.status(201).json(newOrder);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const getFile = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+        
+        if (!order || !order.file_name) {
+            return res.status(404).json({ message: 'Файл не найден' });
+        }
+        
+        const filePath = path.join(process.cwd(), 'uploads/orders', order.file_name);
+        
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ message: 'Файл удален' });
+        }
+        
+        // Отправляем файл
+        res.sendFile(filePath);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

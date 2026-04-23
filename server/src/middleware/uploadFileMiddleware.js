@@ -19,13 +19,13 @@ const storage = multer.diskStorage({
 
 // Фильтр файлов (только разрешённые типы)
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx'];
+    const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png'];
     const ext = path.extname(file.originalname).toLowerCase();
     
     if (allowedTypes.includes(ext)) {
         cb(null, true);
     } else {
-        cb(new Error('Неподдерживаемый тип файла. Разрешены: PDF, JPG, PNG, DOC'));
+        cb(new Error('Неподдерживаемый тип файла. Разрешены: PDF, JPG, PNG'));
     }
 };
 

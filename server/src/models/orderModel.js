@@ -37,7 +37,7 @@ const formatProperties = (properties) => {
 export const Order = {
     create: async (userId, serviceId, orderData) => {
         const session = getSession();
-        try {
+        try {           
             const quantity = parseInt(orderData.quantity, 10);
             const result = await session.run(
                 `MATCH (u:User {user_id: $userId})
