@@ -64,7 +64,7 @@ export const Order = {
                     notes: orderData.notes || '',
                     file_name: orderData.file_name || '',
                     file_size: parseInt(orderData.file_size || 0),
-                    file_pages: parseInt(orderData.file_pages || 0)
+                    file_pages: parseInt(orderData.file_pages || 1)
                 }
             );
             if (result.records.length === 0) {
@@ -150,45 +150,92 @@ export const Order = {
         try {
             const result = await session.run(
                 `MATCH (u:User)-[:PLACED_ORDER]->(o:Order {order_id: $orderId})-[:FOR_SERVICE]->(s:Service)
-                 RETURN o, u.email as user_email, s.service_type as service_type, 
-                 o.base_price * o.quantity * o.file_pages AS total_amount`,
+            OPTIONAL MATCH (o)-[:HAS_STATUS_HISTORY]->(h:StatusHistory)
+            OPTIONAL MATCH (h)-[:INITIATED_STATUS_CHANGE]->(e:User)
+            RETURN
+                u.user_id AS user_id,
+                u.email AS user_email,
+                o.base_price * o.quantity * o.file_pages AS total_amount,
+                o,
+                s.service_type AS service_type,
+                collect({
+                    history_id: h.history_id,
+                    changed_at: h.changed_at,
+                    notes: h.notes,
+                    new_status: h.new_status,
+                    employee_id: e.user_id,
+                    employee_name: e.first_name + ' ' + e.last_name
+                }) AS status_history`,
                 { orderId }
             );
             if (result.records.length === 0) return null;
-
             const record = result.records[0];
             return {
                 ...formatProperties(record.get('o').properties),
+                total_amount: toNumeric(record.get('total_amount')),
                 user_email: record.get('user_email'),
                 service_type: record.get('service_type'),
-                total_amount: toNumeric(record.get('total_amount'))
+                status_history: record.get('status_history').map(item => ({
+                    history_id: item.history_id,
+                    changed_at: item.changed_at?.toString?.() || null,
+                    notes: item.notes,
+                    new_status: item.new_status,
+                    employee_id: item.employee_id,
+                    employee_name: item.employee_name
+                }))
             };
         } finally {
             await session.close();
         }
     },
 
-    update: async (orderId, updateData) => {
+    update: async (orderId, updateData, employeeId) => {
         const session = getSession();
         try {
-            const data = { ...updateData };
-            if (data.quantity !== undefined) {
-                data.quantity = parseInt(data.quantity, 10);
-            }
-            if (data.parameters) data.parameters = JSON.stringify(data.parameters);
-
+            const status = updateData.status;
+            const notes = updateData.notes || '';
             const result = await session.run(
                 `MATCH (o:Order {order_id: $orderId})
-                 OPTIONAL MATCH (o)-[:FOR_SERVICE]->(s:Service)
-                 SET o += $data
-                 FOREACH (_ IN CASE WHEN $quantityChanged THEN [1] ELSE [] END |
-                    SET o.total_price = toFloat(s.base_price) * toFloat(o.quantity)
-                 )
-                 RETURN o`,
-                { orderId, data, quantityChanged: Object.hasOwn(data, 'quantity') }
+            OPTIONAL MATCH (e:User {user_id: $employeeId})
+            WHERE e.role IN ["employee", "admin"]            
+            WITH o, e, o.status AS old_status
+            WHERE old_status <> $status
+            SET o.status = $status
+            CREATE (h:StatusHistory {
+                history_id: randomUUID(),
+                new_status: $status,
+                old_status: old_status,
+                changed_at: datetime(),
+                notes: $notes
+            })
+            CREATE (o)-[:HAS_STATUS_HISTORY]->(h)
+            FOREACH (_ IN CASE WHEN e IS NOT NULL THEN [1] ELSE [] END |
+                CREATE (h)-[:INITIATED_STATUS_CHANGE]->(e)
+            )
+            RETURN 
+                o,
+                collect({
+                    history_id: h.history_id,
+                    new_status: h.new_status,
+                    old_status: h.old_status,
+                    changed_at: toString(h.changed_at),
+                    notes: h.notes,
+                    employee_id: e.user_id,
+                    employee_name: e.first_name + ' ' + e.last_name
+                }) AS status_history`,
+                {
+                    orderId,
+                    employeeId,
+                    status,
+                    notes
+                }
             );
             if (result.records.length === 0) return null;
-            return formatProperties(result.records[0].get('o').properties);
+            const record = result.records[0];
+            return {
+                ...formatProperties(record.get('o').properties),
+                status_history: record.get('status_history')
+            };
         } finally {
             await session.close();
         }

@@ -81,7 +81,8 @@ export const getOrdersByUser = async (req, res) => {
 
 export const updateOrder = async (req, res) => {
     try {
-        const updatedOrder = await Order.update(req.params.id, req.body);
+        const employeeId = req.user.user_id;
+        const updatedOrder = await Order.update(req.params.id, req.body, employeeId);
         if (!updatedOrder) {
             return res.status(404).json({ message: 'Заказ не найден или ошибка обновления' });
         }
