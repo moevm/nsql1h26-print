@@ -20,15 +20,16 @@
       <p>
         <strong>Файл: </strong>
         <a 
-          v-if="order.file && order.file !== '—'"
+          v-if="order.file_name && order.file_name !== '—'"
           href="#"
           @click.prevent="viewFile"
         >
-          {{ order.originalFileName || order.file }}
+          {{ order.file_name }}
         </a>
         <span v-else>—</span>
       </p>
       <p><strong>Формат:</strong> {{ order.format }}</p>
+      <p><strong>Количество страниц:</strong> {{ order.file_pages }}</p>
       <p><strong>Комментарий:</strong> {{ order.comment }}</p>
       <p><strong>Цветность:</strong> {{ order.color }}</p>
       <p><strong>Количество:</strong> {{ order.quantity }}</p>

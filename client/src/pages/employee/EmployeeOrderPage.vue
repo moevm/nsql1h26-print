@@ -99,10 +99,6 @@
                   <span class="info-label">Формат:</span>
                   <span class="info-value">{{ params.format }}</span>
                 </div>
-                <div class="info-row" v-if="params.paper_type">
-                  <span class="info-label">Тип бумаги:</span>
-                  <span class="info-value">{{ params.paper_type }}</span>
-                </div>
                 <div class="info-row" v-if="params.color">
                   <span class="info-label">Цветность:</span>
                   <span class="info-value">{{ params.color }}</span>
@@ -119,12 +115,30 @@
             <n-card size="small" title="Файл">
               <div class="info-list">
                 <div class="info-row">
-                  <span class="info-label">Имя файла:</span>
-                  <span class="info-value">{{ order.file_name }}</span>
+                  <span class="info-label">Файл: </span>
+                  <span class="info-value">
+                    <template v-if="order.file_name && order.file_name !== '—'">
+                        <a 
+                            href="#"
+                            @click.prevent="viewFile"
+                            class="file-link"
+                            :title="`Открыть файл ${order.file_name}`"
+                        >
+                            {{ order.file_name }}
+                        </a>
+                    </template>
+                    <template v-else>
+                        —
+                    </template>
+                  </span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Размер:</span>
                   <span class="info-value">{{ formatFileSize(order.file_size) }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Количество страниц:</span>
+                  <span class="info-value">{{ order.file_pages }}</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Комментарий:</span>
@@ -339,6 +353,20 @@ const formatDate = (iso) => {
   if (!iso) return '';
   return new Date(iso).toLocaleString('ru-RU');
 };
+
+const viewFile = async () => {
+  try {
+    const response = await ordersApi.getFile(route.params.id);
+    
+    // Создаем blob URL для просмотра
+    const blob = response.data;
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error) {
+    console.error('Ошибка при открытии файла:', error);
+  }
+}
 
 onMounted(loadOrder);
 </script>
