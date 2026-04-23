@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: client/Dockerfile
     ports:
-      - 8080:8080
+      - 127.0.0.1:8080:8080
     depends_on:
       - server
     networks:
@@ -14,20 +14,11 @@ services:
       context: .
       dockerfile: server/Dockerfile
     ports:
-      - 3000:3000
+      - 127.0.0.1:3000:3000
     env_file:
       - ./server/.env
     volumes:
       - uploads_data:/app/uploads
-    develop:
-      watch:
-        - action: sync
-          path: ./server
-          target: /app
-          ignore:
-            - node_modules/
-        - action: rebuild
-          path: ./server/package.json
     depends_on:
       db:
         condition: service_healthy
@@ -35,9 +26,7 @@ services:
       - app-network
   db:
     image: neo4j:4.4-community
-    ports:
-      - "7474:7474" # UI
-      - "7687:7687"
+    container_name: db
     environment:
       - NEO4J_AUTH=neo4j/password
     restart: unless-stopped
