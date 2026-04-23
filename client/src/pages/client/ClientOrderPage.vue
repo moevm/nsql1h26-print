@@ -10,7 +10,7 @@
         </button>
         <h1>{{ order.number }}</h1>
       </div>
-
+      <p><strong>Дата оформления:</strong> {{ formatDate(order.created_at) }}</p>
       <p><strong>Статус:</strong> {{ order.statusText }}</p>
       <p><strong>Итого:</strong> {{ order.total }} руб</p>
 
@@ -89,6 +89,11 @@ const goBackToAccount = () => {
     return;
   }
   router.back();
+};
+
+const formatDate = (iso) => {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('ru-RU');
 };
 
 const viewFile = async () => {
