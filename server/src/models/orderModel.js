@@ -56,7 +56,6 @@ export const Order = {
 
             CREATE (h:StatusHistory {
                 history_id: randomUUID(),
-                old_status: null,
                 new_status: 'pending',
                 changed_at: datetime(),
                 notes: 'initial status'
@@ -179,7 +178,6 @@ export const Order = {
                     changed_at: toString(h.changed_at),
                     notes: h.notes,
                     new_status: h.new_status,
-                    old_status: h.old_status,
                     user_id: actor.user_id,
                     user_name: actor.first_name + ' ' + actor.last_name
                 }
@@ -217,13 +215,11 @@ export const Order = {
             const result = await session.run(
                 `MATCH (o:Order {order_id: $orderId})
             MATCH (u:User {user_id: $userId})
-            WITH o, u, o.status AS old_status
-            WHERE old_status <> $status
+            WITH o, u
             SET o.status = $status
             CREATE (h:StatusHistory {
                 history_id: randomUUID(),
                 new_status: $status,
-                old_status: old_status,
                 changed_at: datetime(),
                 notes: $notes
             })
