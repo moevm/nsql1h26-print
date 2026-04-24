@@ -48,6 +48,7 @@
         <!-- Загрузка файла (для print и risography) -->
         <n-form-item v-if="needsFileUpload" label="Файл для печати">
           <n-upload
+            :key="uploadKey"
             :multiple="false"
             :max="1"
             :show-file-list="false"
@@ -199,8 +200,8 @@ const router = useRouter()
 const notification = useNotification()
 
 // Refs
-const uploadedFile = ref<null>(null)
-const calculatedCost = ref<null>(null)
+const uploadedFile = ref(null)
+const calculatedCost = ref(null)
 const isLoading = ref(false)
 const isSubmitting = ref(false)
 const comment = ref('')
@@ -208,6 +209,7 @@ const showConfirmModal = ref(false)
 const serviceData = ref(null);
 const pageCount = ref(null); 
 const isCalculatingPages = ref(false);
+const uploadKey = ref(0);
 
 const timeSlotOptions = [
   { label: '09:00 – 11:00', value: '09:00-11:00' },
@@ -339,8 +341,9 @@ const handleFileUpload = async (options) => {
 };
 
 const removeFile = () => {
-  uploadedFile.value = null
-  onFormChange()
+  uploadedFile.value = null;
+  uploadKey.value++; 
+  onFormChange();
 }
 
 const calculateCost = async () => {
