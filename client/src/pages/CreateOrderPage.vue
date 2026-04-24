@@ -11,7 +11,7 @@
         size="large"
       >
         <!-- Количество -->
-        <n-form-item label="Количество" path="quantity">
+        <n-form-item label="Количество копий" path="quantity">
           <n-input-number
             v-model:value="formData.quantity"
             :min="1"
@@ -159,7 +159,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { PDFDocument } from 'pdf-lib';
 import { ordersApi } from '@/api/orders'
@@ -189,7 +189,7 @@ const props = defineProps({
   service_type: {
     type: String,
     required: true,
-    validator: (value: string) => ['scan', 'print', 'risography'].includes(value)
+    validator: (value) => ['scan', 'print', 'risography'].includes(value)
   }
 })
 
@@ -274,7 +274,7 @@ const canCalculate = computed(() => {
 
 // Methods
 const updateParameters = () => {
-  const params: any = { format: localParameters.format }
+  const params = { format: localParameters.format }
   if (needsColorMode.value) {
     params.color = localParameters.color
   }
@@ -292,7 +292,7 @@ const onFormChange = () => {
   updateParameters()
 }
 
-const formatFileSize = (bytes: number): string => {
+const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 Bytes'
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
@@ -348,7 +348,7 @@ const calculateCost = async () => {
   
   isLoading.value = true
   try {
-    const params: any = {}
+    const params = {}
     
     if (needsColorMode.value) {
       params.color_mode = localParameters.color
@@ -428,7 +428,7 @@ const confirmOrder = async () => {
     // Переход на страницу заказов
     router.push(`/orders/${newOrder.order_id}`)
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Ошибка оформления заказа:', error)
     notification.error({
       title: 'Ошибка',

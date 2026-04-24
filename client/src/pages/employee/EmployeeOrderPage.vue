@@ -102,7 +102,7 @@
                   <span class="info-value">{{ params.color }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Количество:</span>
+                  <span class="info-label">Количество копий:</span>
                   <span class="info-value">{{ toNumber(order.quantity) }}</span>
                 </div>
               </div>
