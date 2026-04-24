@@ -10,8 +10,7 @@ const toNumeric = (value) => {
 const formatProperties = (properties) => {
     const formatted = { ...properties };
     const dateFields = ['created_at', 'deactivated_at', 'changed_at'];
-    const numberFields = ['quantity', 'file_size', 'total_price', 'file_pages'];
-
+    const numberFields = ['quantity', 'file_size', 'file_pages', 'base_price'];
     dateFields.forEach(field => {
         if (formatted[field] && typeof formatted[field].toString === 'function') {
             formatted[field] = formatted[field].toString();
@@ -42,19 +41,28 @@ export const Order = {
             const result = await session.run(
                 `MATCH (u:User {user_id: $userId})
                  MATCH (s:Service {service_id: $serviceId})
-                 CREATE (u)-[:PLACED_ORDER]->(o:Order {
-                    order_id: randomUUID(),
-                    quantity: $quantity,
-                    parameters: $parameters,
-                    notes: $notes,
-                    status: 'pending',
-                    file_name: $file_name,
-                    file_size: $file_size,
-                    file_pages: $file_pages,
-                    total_price: toFloat(s.base_price) * toFloat($quantity) * toInteger($file_pages),
-                    created_at: datetime()
-                 })-[:FOR_SERVICE]->(s)
-                 RETURN o`,
+                CREATE (u)-[:PLACED_ORDER]->(o:Order {
+                   order_id: randomUUID(),
+                   quantity: $quantity,
+                   parameters: $parameters,
+                   notes: $notes,
+                   status: 'pending',
+                   file_name: $file_name,
+                   file_size: $file_size,
+                   file_pages: $file_pages,
+                   base_price: toFloat(s.base_price),
+                   created_at: datetime()
+                })-[:FOR_SERVICE]->(s)
+
+            CREATE (h:StatusHistory {
+                history_id: randomUUID(),
+                new_status: 'pending',
+                changed_at: datetime(),
+                notes: 'initial status'
+            })
+            CREATE (o)-[:HAS_STATUS_HISTORY]->(h)
+            CREATE (h)-[:CHANGED_BY]->(u)
+            RETURN o, h, o.base_price * o.quantity * o.file_pages AS total_amount`,
                 {
                     userId,
                     serviceId,
@@ -65,13 +73,23 @@ export const Order = {
                     notes: orderData.notes || '',
                     file_name: orderData.file_name || '',
                     file_size: parseInt(orderData.file_size || 0),
-                    file_pages: parseInt(orderData.file_pages || 0)
+                    file_pages: parseInt(orderData.file_pages || 1)
                 }
             );
             if (result.records.length === 0) {
                 throw new Error('Пользователь или услуга не найдены');
             }
-            return formatProperties(result.records[0].get('o').properties);
+            const record = result.records[0];
+            return {
+                ...formatProperties(record.get('o').properties),
+                total_amount: toNumeric(result.records[0].get('total_amount')),
+                status_history: [
+                    {
+                        ...formatProperties(record.get('h').properties),
+                        user_id: userId
+                    }
+                ]
+            };
         } finally {
             await session.close();
         }
@@ -122,11 +140,12 @@ export const Order = {
                 query += ' WHERE ' + clauses.join(' AND ');
             }
 
-            query += ` RETURN o, 
-                       u.email as user_email, 
-                       u.user_id as user_id, 
-                       s.service_type as service_type 
-                       ORDER BY o.created_at DESC`;
+            query += ` RETURN o,
+                   u.email as user_email,
+                   u.user_id as user_id,
+                   s.service_type as service_type,
+                   o.base_price * o.quantity * o.file_pages AS total_amount
+                   ORDER BY o.created_at DESC`;
 
             const result = await session.run(query, params);
 
@@ -134,7 +153,8 @@ export const Order = {
                 ...formatProperties(record.get('o').properties),
                 user_email: record.get('user_email'),
                 user_id: record.get('user_id'),
-                service_type: record.get('service_type')
+                service_type: record.get('service_type'),
+                total_amount: toNumeric(record.get('total_amount'))
             }));
         } finally {
             await session.close();
@@ -146,43 +166,84 @@ export const Order = {
         try {
             const result = await session.run(
                 `MATCH (u:User)-[:PLACED_ORDER]->(o:Order {order_id: $orderId})-[:FOR_SERVICE]->(s:Service)
-                 RETURN o, u.email as user_email, s.service_type as service_type`,
+            OPTIONAL MATCH (o)-[:HAS_STATUS_HISTORY]->(h:StatusHistory)
+            OPTIONAL MATCH (h)-[:CHANGED_BY]->(actor:User)
+            WITH o, u, s, h, actor
+            ORDER BY h.changed_at DESC
+            WITH o, u, s,
+            collect(
+                CASE WHEN h IS NULL THEN null
+                ELSE {
+                    history_id: h.history_id,
+                    changed_at: toString(h.changed_at),
+                    notes: h.notes,
+                    new_status: h.new_status,
+                    user_id: actor.user_id,
+                    user_name: actor.first_name + ' ' + actor.last_name
+                }
+                END
+            ) AS status_history
+            RETURN
+                u.user_id AS user_id,
+                u.email AS user_email,
+                o,
+                s.service_type AS service_type,
+                status_history,
+                o.base_price * o.quantity * o.file_pages AS total_amount`,
                 { orderId }
             );
-            if (result.records.length === 0) return null;
-
             const record = result.records[0];
+            const history = (record.get('status_history') || [])
+                .filter(Boolean);
             return {
                 ...formatProperties(record.get('o').properties),
+                total_amount: toNumeric(record.get('total_amount')),
                 user_email: record.get('user_email'),
-                service_type: record.get('service_type')
+                service_type: record.get('service_type'),
+                status_history: history
             };
         } finally {
             await session.close();
         }
     },
 
-    update: async (orderId, updateData) => {
+    update: async (orderId, updateData, userId) => {
         const session = getSession();
         try {
-            const data = { ...updateData };
-            if (data.quantity !== undefined) {
-                data.quantity = parseInt(data.quantity, 10);
-            }
-            if (data.parameters) data.parameters = JSON.stringify(data.parameters);
-
+            const status = updateData.status;
+            const notes = updateData.notes || '';
             const result = await session.run(
                 `MATCH (o:Order {order_id: $orderId})
-                 OPTIONAL MATCH (o)-[:FOR_SERVICE]->(s:Service)
-                 SET o += $data
-                 FOREACH (_ IN CASE WHEN $quantityChanged THEN [1] ELSE [] END |
-                    SET o.total_price = toFloat(s.base_price) * toFloat(o.quantity)
-                 )
-                 RETURN o`,
-                { orderId, data, quantityChanged: Object.hasOwn(data, 'quantity') }
+            MATCH (u:User {user_id: $userId})
+            WITH o, u
+            SET o.status = $status
+            CREATE (h:StatusHistory {
+                history_id: randomUUID(),
+                new_status: $status,
+                changed_at: datetime(),
+                notes: $notes
+            })
+            CREATE (o)-[:HAS_STATUS_HISTORY]->(h)
+            CREATE (h)-[:CHANGED_BY]->(u)
+            RETURN o, h, u`,
+                {
+                    orderId,
+                    userId,
+                    status,
+                    notes
+                }
             );
             if (result.records.length === 0) return null;
-            return formatProperties(result.records[0].get('o').properties);
+            const record = result.records[0];
+            return {
+                ...formatProperties(record.get('o').properties),
+                status_history: [
+                    {
+                        ...formatProperties(record.get('h').properties),
+                        user_id: userId
+                    }
+                ]
+            };
         } finally {
             await session.close();
         }

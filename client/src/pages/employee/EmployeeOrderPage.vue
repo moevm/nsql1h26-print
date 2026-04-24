@@ -17,7 +17,6 @@
         </div>
       </template>
 
-      <!-- Кнопки действий -->
       <n-space vertical class="actions-section" v-if="order">
         <n-space wrap>
           <n-button 
@@ -86,7 +85,6 @@
       </n-space>
 
       <n-spin :show="loading" description="Загрузка...">
-        <!-- Информация о заказе -->
         <n-grid :cols="1" :x-gap="16" :y-gap="16" v-if="order">
           <n-gi>
             <n-card size="small" title="Информация о заказе">
@@ -178,7 +176,6 @@
       </template>
     </n-card>
 
-    <!-- Модальное окно подтверждения статуса -->
     <n-modal v-model:show="showConfirmModal" preset="dialog" :title="confirmTitle">
       <template #default>
         <n-text style="white-space: pre-line">{{ confirmText }}</n-text>

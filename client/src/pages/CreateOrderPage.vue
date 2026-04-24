@@ -66,6 +66,33 @@
           </div>
         </n-form-item>
 
+        <!-- Качество скана -->
+        <n-form-item v-if="props.service_type === 'scan'" label="Качество скана">
+          <n-radio-group v-model:value="localParameters.quality" @update:value="onFormChange">
+            <n-radio value="high">
+              <n-space align="center">
+                <span>Сохранить качество</span>
+              </n-space>
+            </n-radio>
+
+            <n-radio value="compressed">
+              <n-space align="center">
+                <span>Сжать файл</span>
+              </n-space>
+            </n-radio>
+          </n-radio-group>
+        </n-form-item>
+
+        <!-- Временной слот  -->
+        <n-form-item v-if="props.service_type === 'scan'" label="Время посещения">
+          <n-select
+              v-model:value="localParameters.time_slot"
+              :options="timeSlotOptions"
+              @update:value="onFormChange"
+              placeholder="Выберите время"
+          />
+        </n-form-item>
+
         <!-- Результат расчета -->
         <n-alert v-if="calculatedCost !== null && !isLoading" type="success" :bordered="false" class="cost-alert">
           <template #header>
@@ -182,6 +209,14 @@ const serviceData = ref(null);
 const pageCount = ref(null); 
 const isCalculatingPages = ref(false);
 
+const timeSlotOptions = [
+  { label: '09:00 – 11:00', value: '09:00-11:00' },
+  { label: '11:00 – 13:00', value: '11:00-13:00' },
+  { label: '13:00 – 15:00', value: '13:00-15:00' },
+  { label: '15:00 – 17:00', value: '15:00-17:00' },
+  { label: '17:00 – 19:00', value: '17:00-19:00' }
+];
+
 // Функция получения количества страниц из PDF
 const getPageCountFromPdf = async (file) => {
   return new Promise((resolve, reject) => {
@@ -211,7 +246,9 @@ const formData = reactive({
 
 const localParameters = reactive({
   format: 'A4',
-  color: 'color'
+  color: 'color',
+  quality: 'high',
+  time_slot: null
 })
 
 // Опции для форматов
@@ -231,8 +268,8 @@ const needsFileUpload = computed(() =>
 
 const canCalculate = computed(() => {
   if (!formData.quantity || formData.quantity < 1) return false
-  if (needsFileUpload.value && !uploadedFile.value) return false
-  return true
+  return !(needsFileUpload.value && !uploadedFile.value);
+
 })
 
 // Methods
@@ -241,6 +278,11 @@ const updateParameters = () => {
   if (needsColorMode.value) {
     params.color = localParameters.color
   }
+
+  if (props.service_type === 'scan') {
+    params.quality = localParameters.quality
+  }
+
   formData.parameters = params
 }
 
@@ -358,7 +400,11 @@ const confirmOrder = async () => {
     formDataSend.append('parameters', JSON.stringify({
         format: localParameters.format,
         ...(needsColorMode.value && { color_mode: localParameters.color }),
-        ...(props.service_type === 'risography' && { circulation: formData.quantity })
+      ...(props.service_type === 'scan' && {
+        quality: localParameters.quality,
+        time_slot: localParameters.time_slot
+      }),
+      ...(props.service_type === 'risography' && { circulation: formData.quantity })
     }));
     formDataSend.append('notes', comment.value);
     

@@ -22,6 +22,11 @@
         <div class="label">Email</div>
         <div class="value">{{ profile.email }}</div>
       </div>
+
+      <div class="field">
+        <div class="label">Создан: </div>
+        <div class="value">{{ profile.created_at }}</div>
+      </div>
     </div>
   </div>
 </template>
@@ -31,14 +36,18 @@ import { computed } from 'vue';
 import { useUserStore } from '../../stores/userStore';
 
 const userStore = useUserStore();
-
+const formatDate = (iso) => {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('ru-RU');
+};
 const profile = computed(() => {
   const user = userStore.user || {};
   return {
     firstName: user.first_name || '—',
     lastName: user.last_name || '—',
     phone: user.phone || '—',
-    email: user.email || '—'
+    email: user.email || '—',
+    created_at: formatDate(user.created_at) || '—',
   };
 });
 </script>

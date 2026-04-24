@@ -13,7 +13,10 @@
       <p><strong>Дата оформления:</strong> {{ formatDate(order.created_at) }}</p>
       <p><strong>Статус:</strong> {{ order.statusText }}</p>
       <p><strong>Итого:</strong> {{ order.total }} руб</p>
-
+      <p v-if="order.service_type === 'scan'">
+        <strong>Время посещения:</strong>
+        {{ order.time_slot }}
+      </p>
       <hr />
 
       <p><strong>Тип:</strong> {{ order.type }}</p>
@@ -33,7 +36,9 @@
       <p><strong>Комментарий:</strong> {{ order.notes }}</p>
       <p><strong>Цветность:</strong> {{ order.color }}</p>
       <p><strong>Количество копий:</strong> {{ order.quantity }}</p>
-  
+      <p v-if="order.service_type === 'scan'">
+        <strong>Качество скана:</strong> {{ order.quality }}
+      </p>
     </div>
   </div>
 </template>
@@ -65,7 +70,7 @@ onMounted(async () => {
         number: `Заказ №${data.order_id.slice(0, 8).toUpperCase()}`,
         statusText: orderStore.mapStatusText(data.status),
         type: orderStore.mapServiceTypeText(data.service_type),
-        total: Number(data.total_price || 0),
+        total: Number(data.total_amount || 0),
         file_name: data.file_name || '—',
         quantity: data.quantity || 0,
         notes: data.notes || '—',
@@ -73,6 +78,8 @@ onMounted(async () => {
         color: orderStore.mapColorModeText(
             orderStore.getParamValue(data.parameters, ['color_mode', 'colorMode', 'color'])
         ),
+        quality: orderStore.mapScanQualityText(orderStore.getParamValue(data.parameters, ['quality'])),
+        time_slot: orderStore.getParamValue(data.parameters, ['time_slot'])
       };
     } catch (error) {
       console.error('Ошибка загрузки заказа:', error);
