@@ -1,0 +1,55 @@
+services:
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile.dev
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./client/src:/app/client/src
+      - ./client/public:/app/client/public
+    depends_on:
+      - server
+    networks:
+      - app-network-dev
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile.dev 
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server/src:/app/server/src
+      - ./uploads_data:/app/server/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network-dev
+
+  db:
+    image: neo4j:4.4-community
+    container_name: db
+    environment:
+      - NEO4J_AUTH=neo4j/password
+    restart: unless-stopped
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 30s
+      retries: 10
+      start_period: 60s
+    networks:
+      - app-network-dev
+
+networks:
+  app-network-dev:
+    driver: bridge
+
+volumes:
+  neo4j-data:
+  uploads_data:

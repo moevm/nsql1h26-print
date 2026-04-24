@@ -1,0 +1,29 @@
+FROM node:lts-alpine
+
+# Переменные окружения для pnpm
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+ENV PNPM_DISABLE_SELF_UPDATE_CHECK=true
+ENV PNPM_STORE_PATH=/pnpm/store
+
+WORKDIR /app
+
+RUN corepack enable
+
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+
+COPY server/package.json ./server/
+
+RUN --mount=type=cache,id=pnpm-store-dev,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter @nosql/server
+
+COPY server ./server
+
+RUN mkdir -p ./uploads/orders && chmod 777 ./uploads/orders
+
+USER node
+
+EXPOSE 3000
+
+# Запускаем сервер в режиме разработки с nodemon
+CMD ["pnpm", "--filter", "@nosql/server", "run", "dev"]
