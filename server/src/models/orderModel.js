@@ -73,7 +73,7 @@ export const Order = {
                     notes: orderData.notes || '',
                     file_name: orderData.file_name || '',
                     file_size: parseInt(orderData.file_size || 0),
-                    file_pages: parseInt(orderData.file_pages || 1)
+                    file_pages: parseInt(orderData.file_pages || 0)
                 }
             );
             if (result.records.length === 0) {

@@ -102,7 +102,7 @@
                   <span class="info-value">{{ params.color }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Количество:</span>
+                  <span class="info-label">Количество копий:</span>
                   <span class="info-value">{{ toNumber(order.quantity) }}</span>
                 </div>
               </div>
@@ -160,6 +160,48 @@
                 <div class="info-row" v-if="order.phone">
                   <span class="info-label">Телефон:</span>
                   <span class="info-value">{{ order.phone }}</span>
+                </div>
+              </div>
+            </n-card>
+          </n-gi>
+          <n-gi>
+            <n-card size="small" title="История статусов">
+              <div class="history-list">
+                <template v-if="order.status_history && order.status_history.length">
+                  <div 
+                    v-for="(item, index) in order.status_history" 
+                    :key="item.history_id"
+                  >
+                    <div class="history-item">
+                      <div class="history-status-row">
+                        <n-tag :type="getStatusType(item.new_status)" size="small">
+                          {{ statusLabels[item.new_status] }}
+                        </n-tag>
+                      </div>
+                      
+                      <div class="history-date-row">
+                        <span class="history-date">{{ formatDate(item.changed_at) }}</span>
+                      </div>
+                      
+                      <div class="history-details">
+                        <div class="info-row">
+                          <span class="info-label">Изменил:</span>
+                          <span class="info-value">{{ item.user_name }}</span>
+                        </div>
+                        
+                        <div class="info-row" v-if="item.notes && item.notes !== 'initial status'">
+                          <span class="info-label">Комментарий:</span>
+                          <span class="info-value">{{ item.notes }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div v-if="index !== order.status_history.length - 1" class="separator"></div>
+                  </div>
+                </template>
+                
+                <div v-else class="empty-history">
+                  Нет истории изменений
                 </div>
               </div>
             </n-card>
@@ -282,7 +324,7 @@ const loadOrder = async () => {
   loading.value = true;
   try {
     const data = await ordersApi.getById(route.params.id);
-    order.value = data.order || data.data || data;
+    order.value =  data;
   } catch (err) {
     console.error('Failed to load order:', err);
   } finally {
@@ -304,6 +346,7 @@ const executeStatusChange = async () => {
   try {
     await ordersApi.update(order.value.order_id, { status: targetStatus });
     order.value.status = targetStatus;
+    await loadOrder();
   } catch (err) {
     console.error('Failed to update status:', err);
   }
@@ -318,6 +361,7 @@ const cancelOrder = async () => {
       notes: cancelReason.value 
     });
     order.value.status = 'cancelled';
+    await loadOrder();
     showCancelModal.value = false;
     cancelReason.value = '';
   } catch (err) {
@@ -413,5 +457,65 @@ onMounted(loadOrder);
 .info-value {
   color: var(--text-primary, #333);
   word-break: break-word;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-item {
+  padding: 16px 0;
+}
+
+.history-status-row {
+  margin-bottom: 8px;
+}
+
+.history-date-row {
+  margin-bottom: 12px;
+}
+
+.history-date {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.history-details {
+  margin-top: 8px;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  min-width: 85px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.info-value {
+  color: #374151;
+  flex: 1;
+}
+
+.separator {
+  height: 1px;
+  background: linear-gradient(to right, #e5e7eb, transparent);
+  margin: 4px 0;
+}
+
+.empty-history {
+  text-align: center;
+  color: #9ca3af;
+  padding: 24px;
+  font-size: 14px;
 }
 </style>
