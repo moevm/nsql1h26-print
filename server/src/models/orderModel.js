@@ -102,13 +102,11 @@ export const Order = {
             const params = {};
             const clauses = [];
 
-            // 🔹 Статус (точное совпадение)
             if (filters.status) {
                 clauses.push('o.status = $status');
                 params.status = filters.status;
             }
 
-            // 🔹 ID пользователя / заказа
             if (filters.userId) {
                 clauses.push('u.user_id = $userId');
                 params.userId = filters.userId;
@@ -118,7 +116,6 @@ export const Order = {
                 params.orderId = filters.orderId;
             }
 
-            // 🔹 Тип услуги (с поддержкой русских названий)
             if (filters.service_type) {
                 clauses.push(`
                     toLower(s.service_type) CONTAINS toLower($service_type)
@@ -132,7 +129,6 @@ export const Order = {
                 params.service_type = filters.service_type;
             }
 
-            // 🔹 Числовые поля — диапазоны
             if (filters.min_quantity !== undefined) {
                 clauses.push('o.quantity >= $min_quantity');
                 params.min_quantity = parseInt(filters.min_quantity);
@@ -166,7 +162,6 @@ export const Order = {
                 params.max_pages = parseInt(filters.max_pages);
             }
 
-            // 🔹 Текстовые поля
             if (filters.file_name) {
                 clauses.push('toLower(o.file_name) CONTAINS toLower($file_name)');
                 params.file_name = filters.file_name;
@@ -180,7 +175,6 @@ export const Order = {
                 params.user_email = filters.user_email;
             }
 
-            // 🔹 Параметры из JSON (распаковываем на уровне Cypher)
             if (filters.format) {
                 clauses.push('toLower(o.parameters.format) CONTAINS toLower($format)');
                 params.format = filters.format;
@@ -194,7 +188,6 @@ export const Order = {
                 params.paper_type = filters.paper_type;
             }
 
-            // 🔹 Диапазон дат
             if (filters.date_from) {
                 clauses.push('o.created_at >= datetime($date_from)');
                 params.date_from = filters.date_from;
@@ -204,7 +197,6 @@ export const Order = {
                 params.date_to = filters.date_to;
             }
 
-            // 🔹 Сборка WHERE
             if (clauses.length > 0) {
                 query += ' WHERE ' + clauses.join(' AND ');
             }
