@@ -97,9 +97,9 @@
                   <span class="info-label">Формат:</span>
                   <span class="info-value">{{ params.format }}</span>
                 </div>
-                <div class="info-row" v-if="params.color">
+                <div class="info-row" v-if="params.color_mode">
                   <span class="info-label">Цветность:</span>
-                  <span class="info-value">{{ params.color }}</span>
+                  <span class="info-value">{{ getColorMode(params.color_mode) }}</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Количество копий:</span>
@@ -300,6 +300,14 @@ const getStatusType = (status) => {
   return map[status] || 'default';
 };
 
+const getColorMode = (mode) => {
+  const map = {
+    color: 'Цветное',
+    bw: 'Ч/Б'
+  };
+  return map[mode] || mode || '—';
+};
+
 const params = computed(() => {
   if (!order.value?.parameters) return {};
   try {
@@ -370,14 +378,28 @@ const cancelOrder = async () => {
 };
 
 const getServiceType = (o) => {
+  const serviceMap = {
+    print: 'Печать',
+    scan: 'Сканирование',
+    risography: 'Ризография'
+  };
   if (!o) return 'Заказ';
-  if (o.service_type) return o.service_type;
-  if (o.service_name) return o.service_name;
+  if (o.service_type) {
+    return serviceMap[o.service_type] || o.service_type;
+  }
+  if (o.service_name) {
+    return serviceMap[o.service_name] || o.service_name;
+  }
   if (o.parameters) {
     try {
-      const p = typeof o.parameters === 'string' ? JSON.parse(o.parameters) : o.parameters;
-      return p.service_type || p.type || 'Заказ';
-    } catch { return 'Заказ'; }
+      const p = typeof o.parameters === 'string'
+          ? JSON.parse(o.parameters)
+          : o.parameters;
+      const type = p.service_type || p.type;
+      return serviceMap[type] || type || 'Заказ';
+    } catch {
+      return 'Заказ';
+    }
   }
   return 'Заказ';
 };

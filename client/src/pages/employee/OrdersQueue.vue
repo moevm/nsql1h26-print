@@ -82,12 +82,17 @@
         >
           <div class="order-row">
             <n-space justify="space-between" align="center" :wrap="false">
-              <n-space>
-                <n-tag :type="getStatusType(order.status)" size="small">
-                  {{ statusLabels[order.status] }}
-                </n-tag>
-                <n-text strong>№{{ order.order_id.slice(-4) }}</n-text>
-                <n-text depth="3">{{ getServiceType(order) }}</n-text>
+              <n-space vertical :size="2">
+                <n-space>
+                  <n-tag :type="getStatusType(order.status)" size="small">
+                    {{ statusLabels[order.status] }}
+                  </n-tag>
+                  <n-text strong>№{{ order.order_id.slice(-4) }}</n-text>
+                  <n-text depth="3">{{ getServiceType(order) }}</n-text>
+                </n-space>
+                <n-text depth="3" style="font-size: 13px;">
+                  {{ getOrderSummary(order) }}
+                </n-text>
               </n-space>
               <n-space align="center">
                 <n-text depth="2">
@@ -113,12 +118,17 @@
         >
           <div class="order-row">
             <n-space justify="space-between" align="center" :wrap="false">
-              <n-space>
-                <n-tag :type="getStatusType(order.status)" size="small">
-                  {{ statusLabels[order.status] }}
-                </n-tag>
-                <n-text strong>№{{ order.order_id.slice(-4) }}</n-text>
-                <n-text depth="3">{{ getServiceType(order) }}</n-text>
+              <n-space vertical :size="2">
+                <n-space>
+                  <n-tag :type="getStatusType(order.status)" size="small">
+                    {{ statusLabels[order.status] }}
+                  </n-tag>
+                  <n-text strong>№{{ order.order_id.slice(-4) }}</n-text>
+                  <n-text depth="3">{{ getServiceType(order) }}</n-text>
+                </n-space>
+                <n-text depth="3" style="font-size: 13px;">
+                  {{ getOrderSummary(order) }}
+                </n-text>
               </n-space>
               <n-space align="center">
                 <n-text depth="2">
@@ -184,6 +194,38 @@ const getStatusType = (status) => {
     completed: 'success'
   };
   return map[status] || 'default';
+};
+
+const getOrderSummary = (order) => {
+  const params =
+      typeof order.parameters === 'string'
+          ? JSON.parse(order.parameters)
+          : order.parameters || {};
+
+  const colorMap = {
+    color: 'Цветн.',
+    bw: 'Ч/Б'
+  };
+
+  const parts = [];
+
+  if (params.color_mode) {
+    parts.push(colorMap[params.color_mode] || params.color_mode);
+  }
+
+  if (params.format) {
+    parts.push(params.format);
+  }
+
+  if (order.file_pages) {
+    parts.push(`${order.file_pages} стр.`);
+  }
+
+  if (order.quantity) {
+    parts.push(`${order.quantity} коп.`);
+  }
+
+  return parts.join(' – ');
 };
 
 const loadOrders = async () => {
@@ -259,13 +301,29 @@ const filteredOrders = computed(() => {
 
 const showMore = computed(() => visibleCount.value < otherOrders.value.length);
 
-const getServiceType = (order) => {
-  if (order.service_type) return order.service_type;
-  if (order.parameters) {
+const getServiceType = (o) => {
+  const serviceMap = {
+    print: 'Печать',
+    scan: 'Сканирование',
+    risography: 'Ризография'
+  };
+  if (!o) return 'Заказ';
+  if (o.service_type) {
+    return serviceMap[o.service_type] || o.service_type;
+  }
+  if (o.service_name) {
+    return serviceMap[o.service_name] || o.service_name;
+  }
+  if (o.parameters) {
     try {
-      const p = typeof order.parameters === 'string' ? JSON.parse(order.parameters) : order.parameters;
-      return p.service_type || p.type || 'Заказ';
-    } catch { return 'Заказ'; }
+      const p = typeof o.parameters === 'string'
+          ? JSON.parse(o.parameters)
+          : o.parameters;
+      const type = p.service_type || p.type;
+      return serviceMap[type] || type || 'Заказ';
+    } catch {
+      return 'Заказ';
+    }
   }
   return 'Заказ';
 };
