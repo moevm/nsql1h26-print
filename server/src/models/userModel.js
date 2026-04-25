@@ -48,23 +48,54 @@ export const User = {
     find: async (filters = {}) => {
         const session = getSession();
         try {
-            let query = 'MATCH (u:User) WHERE u.deactivated_at IS NULL ';
+            let query = 'MATCH (u:User)';
             const params = {};
             const clauses = [];
 
+            if (!filters.include_deactivated) {
+                clauses.push('u.deactivated_at IS NULL');
+            }
+
             if (filters.first_name) {
-                clauses.push('u.first_name CONTAINS $first_name');
+                clauses.push('toLower(u.first_name) CONTAINS toLower($first_name)');
                 params.first_name = filters.first_name;
             }
+            if (filters.last_name) {
+                clauses.push('toLower(u.last_name) CONTAINS toLower($last_name)');
+                params.last_name = filters.last_name;
+            }
+            if (filters.email) {
+                clauses.push('toLower(u.email) CONTAINS toLower($email)');
+                params.email = filters.email;
+            }
+            if (filters.phone) {
+                clauses.push('u.phone CONTAINS $phone');
+                params.phone = filters.phone;
+            }
+
             if (filters.role) {
                 clauses.push('u.role = $role');
                 params.role = filters.role;
             }
+            if (filters.user_id) {
+                clauses.push('u.user_id = $user_id');
+                params.user_id = filters.user_id;
+            }
+
+            if (filters.created_from) {
+                clauses.push('u.created_at >= datetime($created_from)');
+                params.created_from = filters.created_from;
+            }
+            if (filters.created_to) {
+                clauses.push('u.created_at <= datetime($created_to)');
+                params.created_to = filters.created_to;
+            }
 
             if (clauses.length > 0) {
-                query += 'AND ' + clauses.join(' AND ');
+                query += ' WHERE ' + clauses.join(' AND ');
             }
-            query += ' RETURN u';
+            
+            query += ' RETURN u ORDER BY u.created_at DESC';
 
             const result = await session.run(query, params);
             return result.records.map(record => formatProperties(record.get('u').properties));

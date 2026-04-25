@@ -48,6 +48,32 @@
           placeholder="Период создания"
           clearable
         />
+
+        <n-input v-model:value="filters.clientEmail" placeholder="Email клиента..." clearable />
+        <n-input v-model:value="filters.fileName" placeholder="Имя файла..." clearable />
+        
+        <n-space>
+          <n-input-number v-model:value="filters.minQuantity" placeholder="Мин. кол-во" :min="1" style="width:120px" />
+          <n-input-number v-model:value="filters.maxQuantity" placeholder="Макс. кол-во" :min="1" style="width:120px" />
+        </n-space>
+        
+        <n-space>
+          <n-input-number v-model:value="filters.minPrice" placeholder="Мин. цена" :min="0" step="10" style="width:120px" />
+          <n-input-number v-model:value="filters.maxPrice" placeholder="Макс. цена" :min="0" step="10" style="width:120px" />
+        </n-space>
+        
+        <n-select v-model:value="filters.format" placeholder="Формат" clearable :options="[
+          { label: 'A4', value: 'A4' },
+          { label: 'A5', value: 'A5' }
+        ]" />
+        
+        <n-select v-model:value="filters.colorMode" placeholder="Цветность" clearable :options="[
+          { label: 'Цветное', value: 'color' },
+          { label: 'Ч/Б', value: 'bw' }
+        ]" />
+        
+        <n-input v-model:value="filters.notes" placeholder="Поиск в комментариях..." clearable />
+
         
         <!-- Сортировка (не сбрасывает фильтры) -->
         <n-space justify="center">
@@ -164,7 +190,16 @@ const filters = ref({
   orderId: '',
   status: null,
   serviceType: null,
-  dateRange: null
+  dateRange: null,
+  clientEmail: null,
+  fileName: null,
+  minQuantity: null,
+  maxQuantity: null,
+  minPrice: null,
+  maxPrice: null,
+  format: null,
+  colorMode: null,
+  notes: null
 });
 
 const statusLabels = {
@@ -189,13 +224,30 @@ const getStatusType = (status) => {
 const loadOrders = async () => {
   loading.value = true;
   try {
-    const data = await ordersApi.getAll();
+    const [dateFrom, dateTo] = filters.value.dateRange || [];
+    const apiParams = {
+      orderId: filters.value.orderId || undefined,
+      status: filters.value.status || undefined,
+      service_type: filters.value.serviceType || undefined,
+      date_from: dateFrom?.toISOString(),
+      date_to: dateTo?.toISOString(),
+      user_email: filters.value.clientEmail || undefined,
+      file_name: filters.value.fileName || undefined,
+      min_quantity: filters.value.minQuantity || undefined,
+      max_quantity: filters.value.maxQuantity || undefined,
+      min_price: filters.value.minPrice || undefined,
+      max_price: filters.value.maxPrice || undefined,
+      format: filters.value.format || undefined,
+      color_mode: filters.value.colorMode || undefined,
+      notes: filters.value.notes || undefined
+    };
+    
+    Object.keys(apiParams).forEach(key => apiParams[key] === undefined && delete apiParams[key]);
+    
+    const data = await ordersApi.getAll(apiParams);
     orders.value = Array.isArray(data) ? data : (data.orders || data.data || []);
-  } catch (err) {
-    console.error('Failed to load orders:', err);
-  } finally {
-    loading.value = false;
-  }
+  } catch (err) { console.error('Failed to load orders:', err); }
+  finally { loading.value = false; }
 };
 
 const pendingOrders = computed(() => {
@@ -241,6 +293,21 @@ const matchesFilters = (order) => {
     if (from && orderDate < new Date(from).getTime()) return false;
     if (to && orderDate > new Date(to).getTime()) return false;
   }
+
+  if (filters.value.clientEmail && !order.user_email?.toLowerCase().includes(filters.value.clientEmail.toLowerCase())) return false;
+
+  if (filters.value.fileName && !order.file_name?.toLowerCase().includes(filters.value.fileName.toLowerCase())) return false;
+
+  if (filters.value.minQuantity !== null && order.quantity < filters.value.minQuantity) return false;
+  if (filters.value.maxQuantity !== null && order.quantity > filters.value.maxQuantity) return false;
+  if (filters.value.minPrice !== null && order.total_price < filters.value.minPrice) return false;
+  if (filters.value.maxPrice !== null && order.total_price > filters.value.maxPrice) return false;
+
+  const params = typeof order.parameters === 'string' ? JSON.parse(order.parameters) : order.parameters;
+  if (filters.value.format && params?.format !== filters.value.format) return false;
+  if (filters.value.colorMode && params?.color_mode !== filters.value.colorMode) return false;
+
+  if (filters.value.notes && !order.notes?.toLowerCase().includes(filters.value.notes.toLowerCase())) return false;
   
   return true;
 };

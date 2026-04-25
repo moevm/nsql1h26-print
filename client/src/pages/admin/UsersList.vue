@@ -11,6 +11,9 @@
       <n-space vertical class="filters-section">
         <n-input v-model:value="filters.lastName" placeholder="Фамилия..." clearable />
         <n-input v-model:value="filters.firstName" placeholder="Имя..." clearable />
+        <n-input v-model:value="filters.email" placeholder="Email..." clearable />
+        <n-input v-model:value="filters.phone" placeholder="Телефон..." clearable />
+        <n-input v-model:value="filters.userId" placeholder="ID пользователя..." clearable />
         <n-select v-model:value="filters.role" placeholder="Роль" clearable
           :options="[
             { label: 'Админ', value: 'admin' },
@@ -24,6 +27,11 @@
             { label: 'Деактивирован', value: 'deactivated' }
           ]"
         />
+        <n-space>
+          <n-date-picker v-model:value="filters.createdFrom" type="date" placeholder="С даты" clearable />
+          <n-date-picker v-model:value="filters.createdTo" type="date" placeholder="По дату" clearable />
+        </n-space>
+
       </n-space>
 
       <n-data-table :columns="columns" :data="visibleUsers" :loading="loading" striped bordered>
@@ -96,8 +104,13 @@ const loading = ref(false);
 const filters = ref({
   firstName: null,
   lastName: null,
+  email: null,
+  phone: null,
   role: null,
-  status: null
+  status: null,
+  createdFrom: null,
+  createdTo: null,
+  userId: null
 });
 
 // Пагинация:
@@ -236,13 +249,16 @@ const executeStatusChange = async () => {
 const loadUsers = async () => {
   loading.value = true;
   try {
-    const data = await usersApi.getAll();
+    const apiParams = {
+      ...filters.value,
+      created_from: filters.value.createdFrom?.toISOString(),
+      created_to: filters.value.createdTo?.toISOString()
+    };
+    
+    const data = await usersApi.getAll(apiParams);
     users.value = Array.isArray(data) ? data : (data.users || data.data || []);
-  } catch (err) {
-    console.error('Failed to load users:', err);
-  } finally {
-    loading.value = false;
-  }
+  } catch (err) { console.error('Failed to load users:', err); }
+  finally { loading.value = false; }
 };
 
 const matchesFilters = (user) => {
@@ -254,6 +270,11 @@ const matchesFilters = (user) => {
     if (filters.value.status === 'active' && !isActive) return false;
     if (filters.value.status === 'deactivated' && isActive) return false;
   }
+  if (filters.value.email && !user.email?.toLowerCase().includes(filters.value.email.toLowerCase())) return false;
+  if (filters.value.phone && !user.phone?.includes(filters.value.phone)) return false;
+  if (filters.value.createdFrom && new Date(user.created_at) < new Date(filters.value.createdFrom)) return false;
+  if (filters.value.createdTo && new Date(user.created_at) > new Date(filters.value.createdTo)) return false;
+  if (filters.value.userId && user.user_id !== filters.value.userId) return false;
   return true;
 };
 
