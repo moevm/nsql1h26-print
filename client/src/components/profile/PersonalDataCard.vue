@@ -27,6 +27,11 @@
         <div class="label">Создан: </div>
         <div class="value">{{ profile.created_at }}</div>
       </div>
+
+      <div class="field">
+        <div class="label">Id: </div>
+        <div class="value">{{ profile.user_id }}</div>
+      </div>
     </div>
   </div>
 </template>
@@ -48,6 +53,7 @@ const profile = computed(() => {
     phone: user.phone || '—',
     email: user.email || '—',
     created_at: formatDate(user.created_at) || '—',
+    user_id: user.user_id,
   };
 });
 </script>
