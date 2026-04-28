@@ -11,6 +11,15 @@
       <n-space vertical class="filters-section">
         <n-input v-model:value="filters.lastName" placeholder="Фамилия..." clearable />
         <n-input v-model:value="filters.firstName" placeholder="Имя..." clearable />
+        <n-input v-model:value="filters.email" placeholder="Email..." clearable />
+        <n-input v-model:value="filters.phone" placeholder="Телефон..." clearable />
+        <n-input v-model:value="filters.userId" placeholder="ID пользователя..." clearable />
+        <n-date-picker
+          v-model:value="filters.createdRange"
+          type="datetimerange"
+          placeholder="Дата регистрации"
+          clearable
+        />
         <n-select v-model:value="filters.role" placeholder="Роль" clearable
           :options="[
             { label: 'Админ', value: 'admin' },
@@ -82,11 +91,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, h, watch } from 'vue';
+import { ref, computed, onMounted, watch, h } from 'vue';
 import { useUserStore } from '@/stores/userStore';
-import { 
-  NCard, NText, NSpace, NInput, NSelect, NDataTable, NEmpty, NTag, NModal, NButton
-} from 'naive-ui';
+import { NCard, NText, NSpace, NInput, NSelect, NDataTable, NDatePicker, NEmpty, NTag, NModal, NButton } from 'naive-ui';
 import { usersApi } from '@/api/users';
 
 const userStore = useUserStore();
@@ -96,25 +103,29 @@ const loading = ref(false);
 const filters = ref({
   firstName: null,
   lastName: null,
+  email: null,
+  phone: null,
+  userId: null,
   role: null,
-  status: null
+  status: null,          // 'active' / 'deactivated'
+  createdFrom: null,
+  createdTo: null
 });
 
-// Пагинация:
+// Пагинация на клиенте (после серверной фильтрации)
 const visibleCount = ref(10);
 
 const showRoleModal = ref(false);
 const showStatusModal = ref(false);
 const targetUser = ref(null);
 const pendingRole = ref('');
-const pendingAction = ref(''); // 'deactivate' | 'activate'
+const pendingAction = ref('');
 
 const roleOptions = [
   { label: 'Админ', value: 'admin' },
   { label: 'Сотрудник', value: 'employee' },
   { label: 'Клиент', value: 'client' }
 ];
-
 const roleLabels = { admin: 'Админ', employee: 'Сотрудник', client: 'Клиент' };
 
 const isCurrentUser = (userId) => {
@@ -158,10 +169,8 @@ const columns = [
     title: 'Статус',
     key: 'status',
     width: 130,
-    render: (row) => h(NTag, {
-      type: row.deactivated_at ? 'error' : 'success',
-      size: 'small'
-    }, { default: () => row.deactivated_at ? 'Деактивирован' : 'Активен' })
+    render: (row) => h(NTag, { type: row.deactivated_at ? 'error' : 'success', size: 'small' },
+      { default: () => row.deactivated_at ? 'Деактивирован' : 'Активен' })
   },
   {
     title: 'Действия',
@@ -176,9 +185,7 @@ const columns = [
         type: isActive ? 'error' : 'success',
         disabled: isSelf,
         onClick: () => handleStatusToggle(row)
-      }, { 
-        default: () => isSelf ? 'Вы' : (isActive ? 'Деактивировать' : 'Активировать') 
-      });
+      }, { default: () => isSelf ? 'Вы' : (isActive ? 'Деактивировать' : 'Активировать') });
     }
   },
   {
@@ -189,6 +196,7 @@ const columns = [
   }
 ];
 
+// Обработчики модалок (без изменений)
 const handleRoleSelect = (user, newRole) => {
   if (isCurrentUser(user.user_id)) return;
   targetUser.value = user;
@@ -207,14 +215,12 @@ const executeRoleChange = async () => {
   showRoleModal.value = false;
   const user = targetUser.value;
   const newRole = pendingRole.value;
-
   try {
     const updatedUser = await usersApi.update(user.user_id, { role: newRole });
     const idx = users.value.findIndex(u => u.user_id === user.user_id);
     if (idx !== -1) users.value[idx] = { ...users.value[idx], ...updatedUser };
   } catch (err) {
     console.error('Failed to update role:', err);
-    showRoleModal.value = false; 
   }
 };
 
@@ -222,7 +228,6 @@ const executeStatusChange = async () => {
   showStatusModal.value = false;
   const user = targetUser.value;
   const action = pendingAction.value;
-
   try {
     const payload = { deactivated_at: action === 'deactivate' ? new Date().toISOString() : null };
     const updatedUser = await usersApi.update(user.user_id, payload);
@@ -233,11 +238,27 @@ const executeStatusChange = async () => {
   }
 };
 
+// Загрузка с серверными фильтрами
 const loadUsers = async () => {
   loading.value = true;
   try {
-    const data = await usersApi.getAll();
-    users.value = Array.isArray(data) ? data : (data.users || data.data || []);
+    const params = {};
+    if (filters.value.firstName) params.first_name = filters.value.firstName;
+    if (filters.value.lastName) params.last_name = filters.value.lastName;
+    if (filters.value.email) params.email = filters.value.email;
+    if (filters.value.phone) params.phone = filters.value.phone;
+    if (filters.value.userId) params.user_id = filters.value.userId;
+    if (filters.value.role) params.role = filters.value.role;
+    if (filters.value.status) {
+      params.is_active = filters.value.status === 'active' ? 'true' : 'false';
+    }
+    if (filters.value.createdRange && Array.isArray(filters.value.createdRange)) {
+      const [from, to] = filters.value.createdRange;
+      if (from) params.created_from = new Date(from).toISOString();
+      if (to) params.created_to = new Date(to).toISOString();
+    }
+    const data = await usersApi.getAll(params);
+    users.value = Array.isArray(data) ? data : (data.users || []);
   } catch (err) {
     console.error('Failed to load users:', err);
   } finally {
@@ -245,25 +266,25 @@ const loadUsers = async () => {
   }
 };
 
-const matchesFilters = (user) => {
-  if (filters.value.lastName && !user.last_name?.toLowerCase().includes(filters.value.lastName.toLowerCase())) return false;
-  if (filters.value.firstName && !user.first_name?.toLowerCase().includes(filters.value.firstName.toLowerCase())) return false;
-  if (filters.value.role && user.role !== filters.value.role) return false;
-  if (filters.value.status !== null) {
-    const isActive = !user.deactivated_at;
-    if (filters.value.status === 'active' && !isActive) return false;
-    if (filters.value.status === 'deactivated' && isActive) return false;
-  }
-  return true;
-};
-
-const filteredUsers = computed(() => users.value.filter(matchesFilters));
+// Теперь filteredUsers = все полученные (сервер уже отфильтровал)
+const filteredUsers = computed(() => users.value);
 
 const visibleUsers = computed(() => filteredUsers.value.slice(0, visibleCount.value));
-
 const showMore = computed(() => visibleCount.value < filteredUsers.value.length);
 
-watch(() => filters.value, () => { visibleCount.value = 10; }, { deep: true });
+// При изменении любого фильтра перезапрашиваем и сбрасываем пагинацию
+watch(
+  () => [
+    filters.value.firstName, filters.value.lastName, filters.value.email,
+    filters.value.phone, filters.value.userId, filters.value.role,
+    filters.value.status, filters.value.createdRange
+  ],
+  () => {
+    visibleCount.value = 10;
+    loadUsers();
+  },
+  { deep: true }
+);
 
 const loadMore = () => { visibleCount.value += 10; };
 

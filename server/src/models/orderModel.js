@@ -136,6 +136,40 @@ export const Order = {
                 params.dateTo = filters.dateTo;
             }
 
+            if (filters.user_email) {
+                clauses.push('toLower(u.email) CONTAINS toLower($user_email)');
+                params.user_email = filters.user_email;
+            }
+
+            if (filters.order_id) {
+                clauses.push('toLower(o.order_id) CONTAINS toLower($order_id)');
+                params.order_id = filters.order_id;
+            }
+
+            // Фильтр по цветности внутри JSON-параметров
+            if (filters.color_mode) {
+                // Ищем подстроку "color_mode":"bw" или "color_mode":"color"
+                clauses.push('o.parameters CONTAINS $color_mode_pattern');
+                params.color_mode_pattern = `"color_mode":"${filters.color_mode}"`;
+            }
+
+            // Фильтр по формату внутри JSON-параметров
+            if (filters.format) {
+                clauses.push('o.parameters CONTAINS $format_pattern');
+                params.format_pattern = `"format":"${filters.format}"`;
+            }
+
+            // Фильтр по сотруднику
+            if (filters.changed_by) {
+                clauses.push(`
+                    EXISTS {
+                        MATCH (o)-[:HAS_STATUS_HISTORY]->(h:StatusHistory)-[:CHANGED_BY]->(actor:User)
+                        WHERE actor.user_id = $changed_by
+                    }
+                `);
+                params.changed_by = filters.changed_by;
+            }
+
             if (clauses.length > 0) {
                 query += ' WHERE ' + clauses.join(' AND ');
             }

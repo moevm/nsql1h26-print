@@ -61,6 +61,40 @@ export const User = {
                 params.role = filters.role;
             }
 
+            if (filters.last_name) {
+                clauses.push('u.last_name CONTAINS $last_name');
+                params.last_name = filters.last_name;
+            }
+
+            if (filters.is_active !== undefined) {
+                if (filters.is_active === 'true' || filters.is_active === true) {
+                    clauses.push('u.deactivated_at IS NULL');
+                } else {
+                    clauses.push('u.deactivated_at IS NOT NULL');
+                }
+            }
+
+            if (filters.email) {
+                clauses.push('u.email CONTAINS $email');
+                params.email = filters.email;
+            }
+            if (filters.phone) {
+                clauses.push('u.phone CONTAINS $phone');
+                params.phone = filters.phone;
+            }
+            if (filters.user_id) {
+                clauses.push('u.user_id CONTAINS $user_id');
+                params.user_id = filters.user_id;
+            }
+            if (filters.created_from) {
+                clauses.push('u.created_at >= datetime($created_from)');
+                params.created_from = filters.created_from;
+            }
+            if (filters.created_to) {
+                clauses.push('u.created_at <= datetime($created_to)');
+                params.created_to = filters.created_to;
+            }
+
             if (clauses.length > 0) {
                 query += 'AND ' + clauses.join(' AND ');
             }
