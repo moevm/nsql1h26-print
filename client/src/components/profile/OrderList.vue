@@ -11,17 +11,53 @@
             :options="statusOptions"
             placeholder="Статус заказа"
             class="filter-item"
+            clearable
         />
 
-        <n-input
+        <n-select
             v-model:value="filters.service_type"
+            :options="serviceOptions"
             placeholder="Тип услуги"
             clearable
             class="filter-item"
         />
 
+        <n-date-picker 
+          v-model:value="filters.dateRange" 
+          type="datetimerange" 
+          placeholder="Дата заказа" 
+          clearable class="filter-item" 
+        />
+
+        <n-select
+          v-model:value="filters.color_mode"
+          :options="[ { label: 'Цветная', value: 'color' }, { label: 'Ч/Б', value: 'bw' } ]"
+          placeholder="Цветность"
+          clearable
+          class="filter-item"
+        />
+
+        <n-select 
+          v-model:value="filters.format"
+          :options="[ { label: 'A5', value: 'A5' }, { label: 'A4', value: 'A4' } ]"
+          placeholder="Формат" 
+          clearable 
+          class="filter-item" 
+        />
+
+        <n-input 
+          v-model:value="filters.orderId" 
+          placeholder="Номер заказа" 
+          clearable 
+          class="filter-item" 
+        />
+
         <n-button type="primary" attr-type="submit" class="filter-btn">
           Фильтровать
+        </n-button>
+
+        <n-button type="default" @click="resetFilters" class="filter-btn">
+          Сбросить
         </n-button>
 
       </form>
@@ -75,11 +111,16 @@ import {
   NSelect,
   NInput,
   NButton,
+  NDatePicker
 } from 'naive-ui';
 
 const filters = ref({
   status: null,
-  service_type: '',
+  service_type: null,
+  orderId: '',
+  color_mode: null,
+  format: null,
+  dateRange: null
 });
 
 const statusOptions = [
@@ -92,10 +133,39 @@ const statusOptions = [
   { label: 'Все', value: '' },
 ];
 
+const serviceOptions = [
+  { label: 'Печать', value: 'print' },
+  { label: 'Сканирование', value: 'scan' },
+  { label: 'Ризография', value: 'risography' },
+]
+
 const emit = defineEmits(['filter']);
 
 const applyFilters = () => {
-  emit('filter', { ...filters.value });
+  const params = { ...filters.value };
+  if (params.dateRange && Array.isArray(params.dateRange)) {
+    const [from, to] = params.dateRange;
+    if (from) params.dateFrom = new Date(from).toISOString();
+    if (to) params.dateTo = new Date(to).toISOString();
+    delete params.dateRange;
+  }
+  Object.keys(params).forEach(key => {
+  if (params[key] === '' || params[key] === null || params[key] === undefined) {
+    delete params[key];
+  }});
+  emit('filter', params);
+};
+
+const resetFilters = () => {
+  filters.value = {
+    status: null,
+    service_type: null,
+    orderId: '',
+    color_mode: null,
+    format: null,
+    dateRange: null
+  };
+  emit('filter', {});
 };
 
 const props = defineProps({

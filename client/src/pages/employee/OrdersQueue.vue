@@ -15,7 +15,7 @@
             clearable
         />
         
-        <!-- Фильтр по статусу (с серым плейсхолдером) -->
+        <!-- Фильтр по статусу -->
         <n-select
           v-model:value="filters.status"
           placeholder="Фильтр по статусу"
@@ -44,12 +44,44 @@
         <!-- Фильтр по дате (диапазон) -->
         <n-date-picker
           v-model:value="filters.dateRange"
-          type="daterange"
+          type="datetimerange"
           placeholder="Период создания"
           clearable
         />
+
+        <n-input 
+          v-model:value="filters.userEmail" 
+          placeholder="Email клиента..." 
+          clearable 
+        />
+
+        <n-select
+          v-model:value="filters.colorMode"
+          placeholder="Цветность"
+          clearable
+          :options="[
+            { label: 'Цветная', value: 'color' },
+            { label: 'Ч/Б', value: 'bw' }
+          ]"
+        />
+
+        <n-select
+          v-model:value="filters.format" 
+          placeholder="Формат" 
+          clearable 
+          :options="[
+            { label: 'A4', value: 'A4' },
+            { label: 'A5', value: 'A5' }
+          ]"
+        />
+
+        <n-input 
+          v-model:value="filters.changedBy" 
+          placeholder="ID сотрудника (изменившего статус)" 
+          clearable 
+        />
         
-        <!-- Сортировка (не сбрасывает фильтры) -->
+        <!-- Сортировка -->
         <n-space justify="center">
           <n-text depth="3" style="font-size: 0.9rem">Сортировка:</n-text>
           <n-button 
@@ -159,9 +191,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { 
-  NCard, NText, NButton, NSpace, NTag, NInput, NDivider, NEmpty, NSelect, NDatePicker
-} from 'naive-ui';
+import { NCard, NText, NButton, NSpace, NTag, NInput, NDivider, NEmpty, NSelect, NDatePicker } from 'naive-ui';
 import { ordersApi } from '@/api/orders';
 
 const router = useRouter();
@@ -174,7 +204,11 @@ const filters = ref({
   orderId: '',
   status: null,
   serviceType: null,
-  dateRange: null
+  dateRange: null,
+  userEmail: '',          // почта клиента
+  colorMode: null,        // 'color' / 'bw'
+  format: null,             // например 'A4', 'A5'
+  changedBy: null         // ID сотрудника
 });
 
 const statusLabels = {
@@ -184,55 +218,58 @@ const statusLabels = {
   cancelled: 'Отменен',
   completed: 'Завершен'
 };
+const serviceMap = {
+  print: 'Печать',
+  scan: 'Сканирование',
+  risography: 'Ризография'
+};
 
 const getStatusType = (status) => {
-  const map = {
-    pending: 'warning',
-    processing: 'info',
-    ready: 'success',
-    cancelled: 'error',
-    completed: 'success'
-  };
+  const map = { pending: 'warning', processing: 'info', ready: 'success', cancelled: 'error', completed: 'success' };
   return map[status] || 'default';
 };
 
+const getServiceType = (order) => {
+  if (order.service_type) return serviceMap[order.service_type] || order.service_type;
+  if (order.service_name) return serviceMap[order.service_name] || order.service_name;
+  try {
+    const p = typeof order.parameters === 'string' ? JSON.parse(order.parameters) : order.parameters;
+    const type = p?.service_type || p?.type;
+    return serviceMap[type] || type || 'Заказ';
+  } catch { return 'Заказ'; }
+};
+
 const getOrderSummary = (order) => {
-  const params =
-      typeof order.parameters === 'string'
-          ? JSON.parse(order.parameters)
-          : order.parameters || {};
-
-  const colorMap = {
-    color: 'Цветн.',
-    bw: 'Ч/Б'
-  };
-
+  const params = typeof order.parameters === 'string' ? JSON.parse(order.parameters) : order.parameters || {};
+  const colorMap = { color: 'Цветн.', bw: 'Ч/Б' };
   const parts = [];
-
-  if (params.color_mode) {
-    parts.push(colorMap[params.color_mode] || params.color_mode);
-  }
-
-  if (params.format) {
-    parts.push(params.format);
-  }
-
-  if (order.file_pages) {
-    parts.push(`${order.file_pages} стр.`);
-  }
-
-  if (order.quantity) {
-    parts.push(`${order.quantity} коп.`);
-  }
-
+  if (params.color_mode) parts.push(colorMap[params.color_mode] || params.color_mode);
+  if (params.format) parts.push(params.format);
+  if (order.file_pages) parts.push(`${order.file_pages} стр.`);
+  if (order.quantity) parts.push(`${order.quantity} коп.`);
   return parts.join(' – ');
 };
 
+// Загрузка с серверными фильтрами
 const loadOrders = async () => {
   loading.value = true;
   try {
-    const data = await ordersApi.getAll();
-    orders.value = Array.isArray(data) ? data : (data.orders || data.data || []);
+    const params = {};
+    if (filters.value.status) params.status = filters.value.status;
+    if (filters.value.serviceType) params.service_type = filters.value.serviceType;
+    if (filters.value.dateRange && Array.isArray(filters.value.dateRange)) {
+      const [from, to] = filters.value.dateRange;
+      if (from) params.dateFrom = new Date(from).toISOString();
+      if (to) params.dateTo = new Date(to).toISOString();
+    }
+    if (filters.value.userEmail) params.user_email = filters.value.userEmail;
+    if (filters.value.colorMode) params.color_mode = filters.value.colorMode;
+    if (filters.value.format) params.format = filters.value.format;
+    if (filters.value.changedBy) params.changed_by = filters.value.changedBy;
+    if (filters.value.orderId) params.order_id = filters.value.orderId; // тоже на сервер
+
+    const data = await ordersApi.getAll(params);
+    orders.value = Array.isArray(data) ? data : (data.orders || []);
   } catch (err) {
     console.error('Failed to load orders:', err);
   } finally {
@@ -240,102 +277,50 @@ const loadOrders = async () => {
   }
 };
 
-const pendingOrders = computed(() => {
-  return orders.value.filter(o => {
-    if (o.status?.toLowerCase().trim() !== 'pending') return false;
-    return matchesFilters(o);
-  });
-});
+const pendingOrders = computed(() =>
+  orders.value.filter(o => o.status?.toLowerCase().trim() === 'pending')
+);
 
-const otherOrders = computed(() => {
-  return orders.value.filter(o => {
-    if (o.status?.toLowerCase().trim() === 'pending') return false;
-    return matchesFilters(o);
-  });
-});
-
-const matchesFilters = (order) => {
-  // Поиск по номеру (подстрока, регистронезависимый)
-  if (filters.value.orderId) {
-    const q = filters.value.orderId.toLowerCase();
-    const orderIdMatch = order.order_id?.toLowerCase().includes(q) || 
-                         order.order_id?.slice(-4).includes(q);
-    if (!orderIdMatch) return false;
-  }
-  
-  // Фильтр по статусу
-  if (filters.value.status && order.status?.toLowerCase().trim() !== filters.value.status) {
-    return false;
-  }
-  
-  // Фильтр по типу услуги
-  if (filters.value.serviceType) {
-    const orderType = getServiceType(order).toLowerCase();
-    if (!orderType.includes(filters.value.serviceType.toLowerCase())) {
-      return false;
-    }
-  }
-  
-  // Фильтр по дате (диапазон)
-  if (filters.value.dateRange && Array.isArray(filters.value.dateRange)) {
-    const [from, to] = filters.value.dateRange;
-    const orderDate = new Date(order.created_at).getTime();
-    if (from && orderDate < new Date(from).getTime()) return false;
-    if (to && orderDate > new Date(to).getTime()) return false;
-  }
-  
-  return true;
-};
+const otherOrders = computed(() =>
+  orders.value.filter(o => o.status?.toLowerCase().trim() !== 'pending')
+);
 
 const filteredOrders = computed(() => {
-  let result = [...otherOrders.value];
-  
+  let list = [...otherOrders.value];
   if (sortBy.value === 'newest') {
-    result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   } else if (sortBy.value === 'type') {
-    result.sort((a, b) => getServiceType(a).localeCompare(getServiceType(b)));
+    list.sort((a, b) => getServiceType(a).localeCompare(getServiceType(b)));
   }
-  
-  return result.slice(0, visibleCount.value);
+  return list.slice(0, visibleCount.value);
 });
 
 const showMore = computed(() => visibleCount.value < otherOrders.value.length);
 
-const getServiceType = (o) => {
-  const serviceMap = {
-    print: 'Печать',
-    scan: 'Сканирование',
-    risography: 'Ризография'
-  };
-  if (!o) return 'Заказ';
-  if (o.service_type) {
-    return serviceMap[o.service_type] || o.service_type;
-  }
-  if (o.service_name) {
-    return serviceMap[o.service_name] || o.service_name;
-  }
-  if (o.parameters) {
-    try {
-      const p = typeof o.parameters === 'string'
-          ? JSON.parse(o.parameters)
-          : o.parameters;
-      const type = p.service_type || p.type;
-      return serviceMap[type] || type || 'Заказ';
-    } catch {
-      return 'Заказ';
-    }
-  }
-  return 'Заказ';
-};
+// При изменении серверных фильтров перезагружаем данные и сбрасываем пагинацию
+watch(
+  () => [
+    filters.value.status, filters.value.serviceType, filters.value.dateRange,
+    filters.value.userEmail, filters.value.colorMode, filters.value.format,
+    filters.value.changedBy, filters.value.orderId
+  ],
+  () => {
+    visibleCount.value = 5;
+    loadOrders();
+  },
+  { deep: true }
+);
 
-watch(() => [filters.value.orderId, filters.value.status, filters.value.serviceType, filters.value.dateRange, sortBy.value], () => {
-  visibleCount.value = 5;
-}, { deep: true });
+// При изменении поиска по номеру или сортировки сбрасываем пагинацию без перезапроса
+watch(
+  () => [filters.value.orderId, sortBy.value],
+  () => { visibleCount.value = 5; }
+);
 
 const viewOrder = (id) => router.push(`/orders/${id}`);
 const loadMore = () => { visibleCount.value += 5; };
 
-onMounted(loadOrders);
+onMounted(() => loadOrders());
 </script>
 
 <style scoped>
