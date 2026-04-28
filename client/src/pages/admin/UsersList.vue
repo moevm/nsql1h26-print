@@ -112,7 +112,7 @@ const filters = ref({
   createdTo: null
 });
 
-// Пагинация на клиенте (после серверной фильтрации)
+// Пагинация
 const visibleCount = ref(10);
 
 const showRoleModal = ref(false);
@@ -196,7 +196,7 @@ const columns = [
   }
 ];
 
-// Обработчики модалок (без изменений)
+// Обработчики модалок
 const handleRoleSelect = (user, newRole) => {
   if (isCurrentUser(user.user_id)) return;
   targetUser.value = user;
@@ -266,7 +266,6 @@ const loadUsers = async () => {
   }
 };
 
-// Теперь filteredUsers = все полученные (сервер уже отфильтровал)
 const filteredUsers = computed(() => users.value);
 
 const visibleUsers = computed(() => filteredUsers.value.slice(0, visibleCount.value));

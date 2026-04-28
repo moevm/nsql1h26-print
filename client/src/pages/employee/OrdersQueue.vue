@@ -15,7 +15,7 @@
             clearable
         />
         
-        <!-- Фильтр по статусу (с серым плейсхолдером) -->
+        <!-- Фильтр по статусу -->
         <n-select
           v-model:value="filters.status"
           placeholder="Фильтр по статусу"
@@ -81,7 +81,7 @@
           clearable 
         />
         
-        <!-- Сортировка (не сбрасывает фильтры) -->
+        <!-- Сортировка -->
         <n-space justify="center">
           <n-text depth="3" style="font-size: 0.9rem">Сортировка:</n-text>
           <n-button 
@@ -211,7 +211,6 @@ const filters = ref({
   changedBy: null         // ID сотрудника
 });
 
-// Маппинг для отображения
 const statusLabels = {
   pending: 'Ожидает',
   processing: 'В очереди',
@@ -286,7 +285,6 @@ const otherOrders = computed(() =>
   orders.value.filter(o => o.status?.toLowerCase().trim() !== 'pending')
 );
 
-// Применяем сортировку и пагинацию только к «остальным» заказам
 const filteredOrders = computed(() => {
   let list = [...otherOrders.value];
   if (sortBy.value === 'newest') {

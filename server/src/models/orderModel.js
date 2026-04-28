@@ -146,20 +146,16 @@ export const Order = {
                 params.order_id = filters.order_id;
             }
 
-            // Фильтр по цветности внутри JSON-параметров
             if (filters.color_mode) {
-                // Ищем подстроку "color_mode":"bw" или "color_mode":"color"
                 clauses.push('o.parameters CONTAINS $color_mode_pattern');
                 params.color_mode_pattern = `"color_mode":"${filters.color_mode}"`;
             }
 
-            // Фильтр по формату внутри JSON-параметров
             if (filters.format) {
                 clauses.push('o.parameters CONTAINS $format_pattern');
                 params.format_pattern = `"format":"${filters.format}"`;
             }
 
-            // Фильтр по сотруднику
             if (filters.changed_by) {
                 clauses.push(`
                     EXISTS {
