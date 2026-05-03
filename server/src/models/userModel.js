@@ -48,7 +48,7 @@ export const User = {
     find: async (filters = {}) => {
         const session = getSession();
         try {
-            let query = 'MATCH (u:User) WHERE u.deactivated_at IS NULL ';
+            let query = 'MATCH (u:User)';
             const params = {};
             const clauses = [];
 
