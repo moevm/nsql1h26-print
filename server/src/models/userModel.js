@@ -96,7 +96,7 @@ export const User = {
             }
 
             if (clauses.length > 0) {
-                query += 'AND ' + clauses.join(' AND ');
+                query += ' WHERE ' + clauses.join(' AND ');
             }
             query += ' RETURN u';
 

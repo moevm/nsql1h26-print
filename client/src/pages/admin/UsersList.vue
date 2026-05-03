@@ -291,7 +291,11 @@ const loadMore = () => { visibleCount.value += 10; };
 
 const formatDate = (iso) => {
   if (!iso) return '—';
-  return new Date(iso).toLocaleString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  return new Date(iso).toLocaleString('ru-RU', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+    hour12: false
+  });
 };
 
 onMounted(loadUsers);
