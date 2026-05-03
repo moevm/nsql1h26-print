@@ -19,7 +19,11 @@ export const usersApi = {
   },
   
   // Деактивировать пользователя
-  deactivate(userId, reason = '') {
-    return axiosInstance.patch(`/users/${userId}/deactivate`, { reason }).then(res => res.data);
+  //deactivate(userId, reason = '') {
+  //  return axiosInstance.patch(`/users/${userId}/deactivate`, { reason }).then(res => res.data);
+  //},
+
+  getById(userId) {
+    return axiosInstance.get(`/users/${userId}`).then(res => res.data);
   }
 };

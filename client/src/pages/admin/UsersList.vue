@@ -35,7 +35,17 @@
         />
       </n-space>
 
-      <n-data-table :columns="columns" :data="visibleUsers" :loading="loading" striped bordered>
+      <n-data-table 
+        :columns="columns" 
+        :data="visibleUsers" 
+        :loading="loading" 
+        striped 
+        bordered
+        :row-props="(row) => ({ 
+          style: 'cursor: pointer;',
+          onClick: () => router.push(`/admin/users/${row.user_id}`)
+        })"
+      >
         <template #empty>
           <n-empty description="Нет пользователей по заданным фильтрам" />
         </template>
@@ -92,11 +102,13 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, h } from 'vue';
+import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/userStore';
 import { NCard, NText, NSpace, NInput, NSelect, NDataTable, NDatePicker, NEmpty, NTag, NModal, NButton } from 'naive-ui';
 import { usersApi } from '@/api/users';
 
 const userStore = useUserStore();
+const router = useRouter(); 
 const users = ref([]);
 const loading = ref(false);
 
@@ -135,63 +147,49 @@ const isCurrentUser = (userId) => {
 
 const columns = [
   {
-    title: 'ФИ',
-    key: 'name',
-    width: 200,
-    render: (row) => `${row.last_name || ''} ${row.first_name || ''}`.trim() || '—'
+    title: 'ID',
+    key: 'user_id',
+    width: 160,
+    ellipsis: { tooltip: true },
+    render: (row) => row.user_id || '—'
+  },
+  {
+    title: 'Фамилия',
+    key: 'last_name',
+    width: 110,
+    render: (row) => row.last_name || '—'
+  },
+  {
+    title: 'Имя',
+    key: 'first_name',
+    width: 90,
+    render: (row) => row.first_name || '—'
   },
   {
     title: 'Email',
     key: 'email',
-    ellipsis: { tooltip: true },
-    width: 180
+    width: 160,
+    ellipsis: { tooltip: true }
   },
   {
     title: 'Роль',
     key: 'role',
-    width: 190,
-    render: (row) => {
-      const isSelf = isCurrentUser(row.user_id);
-      return h('div', { style: 'display:flex; gap:8px; align-items:center;' }, [
-        h(NSelect, {
-          value: row.role,
-          options: roleOptions,
-          disabled: isSelf,
-          size: 'small',
-          style: { width: '120px' },
-          onUpdateValue: (val) => handleRoleSelect(row, val)
-        }),
-        isSelf ? h(NText, { type: 'warning', depth: 3, size: 'small' }, { default: () => 'Вы' }) : null
-      ]);
-    }
+    width: 90,
+    render: (row) => roleLabels[row.role] || row.role || '—'
   },
   {
     title: 'Статус',
     key: 'status',
-    width: 130,
-    render: (row) => h(NTag, { type: row.deactivated_at ? 'error' : 'success', size: 'small' },
-      { default: () => row.deactivated_at ? 'Деактивирован' : 'Активен' })
+    width: 120,
+    render: (row) => h(NTag, {
+      type: row.deactivated_at ? 'error' : 'success',
+      size: 'small'
+    }, { default: () => row.deactivated_at ? 'Деактивирован' : 'Активен' })
   },
   {
-    title: 'Действия',
-    key: 'actions',
-    width: 140,
-    fixed: 'right',
-    render: (row) => {
-      const isSelf = isCurrentUser(row.user_id);
-      const isActive = !row.deactivated_at;
-      return h(NButton, {
-        size: 'small',
-        type: isActive ? 'error' : 'success',
-        disabled: isSelf,
-        onClick: () => handleStatusToggle(row)
-      }, { default: () => isSelf ? 'Вы' : (isActive ? 'Деактивировать' : 'Активировать') });
-    }
-  },
-  {
-    title: 'Зарегистрирован',
+    title: 'Дата регистрации',
     key: 'created_at',
-    width: 150,
+    width: 140,
     render: (row) => formatDate(row.created_at)
   }
 ];
@@ -264,6 +262,10 @@ const loadUsers = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const viewUserDetail = (userId) => {
+  router.push(`/admin/users/${userId}`);
 };
 
 const filteredUsers = computed(() => users.value);
