@@ -49,6 +49,7 @@
           v-if="user" 
           ref="formRef" 
           :model="formData" 
+          :rules="rules"
           label-placement="top" 
           size="large"
           class="user-form"
@@ -84,7 +85,7 @@
 
             <!-- Телефон -->
             <n-gi>
-              <n-form-item label="Телефон" path="phone">
+              <n-form-item label="Телефон" path="phone" :show-feedback="true">
                 <n-input v-model:value="formData.phone" placeholder="+7..." />
               </n-form-item>
             </n-gi>
@@ -192,6 +193,26 @@ const confirmTitle = ref('');
 const confirmText = ref('');
 const pendingAction = ref(''); // 'activate' | 'deactivate'
 
+const rules = {
+  phone: [
+    {
+      trigger: 'blur',
+      validator: (rule, value) => {
+        if (!value || value.trim() === '') {
+          return true;
+        }
+        const cleanPhone = value.replace(/[\s\-\(\)]/g, '');
+        const phoneRegex = /^\+7[0-9]{10}$/;
+        
+        if (!phoneRegex.test(cleanPhone)) {
+          return new Error('Формат: +79991234567');
+        }
+        return true;
+      }
+    },
+  ],
+};
+
 const roleOptions = [
   { label: 'Админ', value: 'admin' },
   { label: 'Сотрудник', value: 'employee' },
@@ -289,6 +310,12 @@ const isFormChanged = computed(() => {
 // Сохранение изменений
 const saveChanges = async () => {
   try {
+    try {
+        await formRef.value?.validate();
+    } catch (e) {
+        // Если есть ошибки валидации — не отправляем, Naive UI уже показал их визуально
+        return;
+    }
     const updateData = {
       first_name: formData.value.first_name,
       last_name: formData.value.last_name,
