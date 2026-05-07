@@ -124,6 +124,21 @@
                 <n-input :value="formatDate(user.deactivated_at)" disabled />
               </n-form-item>
             </n-gi>
+
+            <n-gi>
+              <n-form-item label="Последнее действие (заказы)">
+                <n-input 
+                  :value="formatDate(user.last_action_at)" 
+                  disabled 
+                  placeholder="Нет активности по заказам"
+                />
+                <template #feedback>
+                  <n-text depth="3" style="font-size: 12px">
+                    {{ getLastActionLabel(user) }}
+                  </n-text>
+                </template>
+              </n-form-item>
+            </n-gi>
           </n-grid>
         </n-form>
       </n-spin>
@@ -228,6 +243,21 @@ const executeAction = async () => {
     // При ошибке возвращаем селект в исходное состояние
     uiStatus.value = user.value?.deactivated_at ? 'deactivated' : 'active';
   }
+};
+
+// Определяет, какое именно действие было последним
+const getLastActionLabel = (user) => {
+  if (!user || !user.last_action_at) return 'Нет активности по заказам';
+  
+  const orderTime = user.last_order_at ? new Date(user.last_order_at).getTime() : 0;
+  const statusTime = user.last_status_change_at ? new Date(user.last_status_change_at).getTime() : 0;
+    if (Math.abs(orderTime - statusTime) < 1000 && orderTime > 0) {
+    return 'Создание заказа';
+  }
+  if (statusTime > orderTime) return 'Изменение статуса заказа';
+  if (orderTime > 0) return 'Создание заказа';
+  
+  return 'Нет активности по заказам';
 };
 
 // Загрузка пользователя

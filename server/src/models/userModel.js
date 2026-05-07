@@ -128,11 +128,35 @@ export const User = {
         const session = getSession();
         try {
             const result = await session.run(
-                'MATCH (u:User {user_id: $user_id}) RETURN u',
+                `MATCH (u:User {user_id: $user_id})
+                OPTIONAL MATCH (u)-[:PLACED_ORDER]->(o_created:Order)
+                OPTIONAL MATCH (u)<-[:CHANGED_BY]-(h:StatusHistory)
+                WITH u, max(o_created.created_at) as last_order_at, max(h.changed_at) as last_status_change_at
+                RETURN u, last_order_at, last_status_change_at`,
                 { user_id }
             );
+            
             if (result.records.length === 0) return null;
-            return formatProperties(result.records[0].get('u').properties);
+            
+            const record = result.records[0];
+            const userData = formatProperties(record.get('u').properties);
+            
+            const lastOrderAt = record.get('last_order_at');
+            const lastStatusChangeAt = record.get('last_status_change_at');
+            
+            const dates = [];
+            if (lastOrderAt) dates.push(new Date(lastOrderAt).getTime());
+            if (lastStatusChangeAt) dates.push(new Date(lastStatusChangeAt).getTime());
+            
+            const lastActionAt = dates.length > 0 
+                ? new Date(Math.max(...dates)).toISOString() 
+                : null;
+            
+            userData.last_order_at = lastOrderAt ? new Date(lastOrderAt).toISOString() : null;
+            userData.last_status_change_at = lastStatusChangeAt ? new Date(lastStatusChangeAt).toISOString() : null;
+            userData.last_action_at = lastActionAt;
+            
+            return userData;
         } finally {
             await session.close();
         }
