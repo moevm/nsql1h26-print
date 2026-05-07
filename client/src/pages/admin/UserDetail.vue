@@ -112,6 +112,21 @@
               </n-form-item>
             </n-gi>
 
+            <n-gi>
+              <n-form-item label="Сумма заказов">
+                <n-input 
+                  :value="formatCurrency(getUserSum(user))" 
+                  disabled 
+                  placeholder="0 ₽"
+                />
+                <template #feedback>
+                  <n-text depth="3" style="font-size: 12px">
+                    {{ getSumLabel(user) }}
+                  </n-text>
+                </template>
+              </n-form-item>
+            </n-gi>
+
             <!-- Дата регистрации -->
             <n-gi>
               <n-form-item label="Зарегистрирован">
@@ -279,6 +294,28 @@ const getLastActionLabel = (user) => {
   if (orderTime > 0) return 'Создание заказа';
   
   return 'Нет активности по заказам';
+};
+
+const formatCurrency = (num) => {
+  return new Intl.NumberFormat('ru-RU', { 
+    style: 'currency', 
+    currency: 'RUB', 
+    maximumFractionDigits: 0 
+  }).format(num || 0);
+};
+
+const getUserSum = (user) => {
+  if (!user) return 0;
+  if (user.role === 'client') return user.total_created_sum || 0;
+  if (['employee', 'admin'].includes(user.role)) return user.total_processed_sum || 0;
+  return 0;
+};
+
+const getSumLabel = (user) => {
+  if (!user) return '';
+  if (user.role === 'client') return 'Общая сумма созданных заказов';
+  if (['employee', 'admin'].includes(user.role)) return 'Сумма заказов, переведённых в «Готов к выдаче»';
+  return '';
 };
 
 // Загрузка пользователя

@@ -129,10 +129,23 @@ export const User = {
         try {
             const result = await session.run(
                 `MATCH (u:User {user_id: $user_id})
+                
                 OPTIONAL MATCH (u)-[:PLACED_ORDER]->(o_created:Order)
-                OPTIONAL MATCH (u)<-[:CHANGED_BY]-(h:StatusHistory)
-                WITH u, max(o_created.created_at) as last_order_at, max(h.changed_at) as last_status_change_at
-                RETURN u, last_order_at, last_status_change_at`,
+                WITH u, 
+                    coalesce(sum(o_created.base_price * o_created.quantity * o_created.file_pages), 0) as total_created_sum,
+                    max(o_created.created_at) as last_order_at
+                
+                OPTIONAL MATCH (u)<-[:CHANGED_BY]-(h_all:StatusHistory)
+                WITH u, total_created_sum, last_order_at, max(h_all.changed_at) as last_status_change_at
+                
+                OPTIONAL MATCH (u)<-[:CHANGED_BY]-(h_ready:StatusHistory {new_status: 'ready'})<-[:HAS_STATUS_HISTORY]-(o_ready:Order)
+                WHERE o_ready.status IN ['ready', 'completed']
+                WITH u, total_created_sum, last_order_at, last_status_change_at, collect(DISTINCT o_ready) as distinct_orders
+                
+                WITH u, total_created_sum, last_order_at, last_status_change_at,
+                    reduce(total = 0, o IN distinct_orders | total + coalesce(o.base_price * o.quantity * o.file_pages, 0)) as total_processed_sum
+                
+                RETURN u, total_created_sum, last_order_at, last_status_change_at, total_processed_sum`,
                 { user_id }
             );
             
@@ -155,6 +168,8 @@ export const User = {
             userData.last_order_at = lastOrderAt ? new Date(lastOrderAt).toISOString() : null;
             userData.last_status_change_at = lastStatusChangeAt ? new Date(lastStatusChangeAt).toISOString() : null;
             userData.last_action_at = lastActionAt;
+            userData.total_created_sum = Number(record.get('total_created_sum') || 0);
+            userData.total_processed_sum = Number(record.get('total_processed_sum') || 0);
             
             return userData;
         } finally {
