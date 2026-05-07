@@ -176,7 +176,6 @@ const showConfirmModal = ref(false);
 const confirmTitle = ref('');
 const confirmText = ref('');
 const pendingAction = ref(''); // 'activate' | 'deactivate'
-const uiStatus = ref('active');
 
 const roleOptions = [
   { label: 'Админ', value: 'admin' },
@@ -189,6 +188,8 @@ const statusOptions = [
   { label: 'Деактивирован', value: 'deactivated' }
 ];
 
+const uiStatus = ref('active');
+
 // Синхронизация селекта с данными из БД при загрузке/обновлении
 watch(() => user.value, (newUser) => {
   if (newUser) {
@@ -196,7 +197,7 @@ watch(() => user.value, (newUser) => {
   }
 });
 
-// При смене значения в списке → открываем подтверждение
+// При смене значения в списке открываем подтверждение
 const onStatusChange = (newVal) => {
   const current = user.value?.deactivated_at ? 'deactivated' : 'active';
   if (newVal === current) return; // ничего не изменилось
@@ -214,9 +215,10 @@ const executeAction = async () => {
   try {
     const isDeactivate = pendingAction.value === 'deactivate';
     
-    // если деактивируем → ставим дату. Если активируем → ставим null
+    // если деактивируем, ставим дату. Если активируем, ставим null
     const payload = { 
-      deactivated_at: isDeactivate ? new Date().toISOString() : null 
+      deactivated_at: isDeactivate ? new Date().toISOString() : null,
+      changed_at: new Date().toISOString()
     };
     
     await usersApi.update(user.value.user_id, payload);
@@ -261,12 +263,14 @@ const saveChanges = async () => {
       first_name: formData.value.first_name,
       last_name: formData.value.last_name,
       phone: formData.value.phone,
-      role: formData.value.role
+      role: formData.value.role,
+      changed_at: new Date().toISOString()
     };
     
     const updated = await usersApi.update(user.value.user_id, updateData);
     user.value = { ...user.value, ...updated };
     originalData.value = { ...updated };
+    formData.value = { ...updated };
     
     // Показываем уведомление (если есть useNotification)
     console.log('Пользователь обновлён');

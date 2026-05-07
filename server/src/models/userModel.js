@@ -2,7 +2,7 @@ import { getSession } from '../config/db.js';
 
 const formatProperties = (properties) => {
     const formatted = { ...properties };
-    ['created_at', 'deactivated_at'].forEach(field => {
+    ['created_at', 'deactivated_at', 'changed_at'].forEach(field => {
         if (formatted[field] && typeof formatted[field].toString === 'function') {
             formatted[field] = formatted[field].toString();
         }
@@ -25,6 +25,7 @@ export const User = {
                             u.phone = $phone,
                             u.role = $role,
                             u.created_at = datetime(),
+                            u.changed_at = datetime(),
                             u.deactivated_at = null
                          RETURN u, (u.created_at IS NOT NULL) as is_new`,
                 {
@@ -140,7 +141,11 @@ export const User = {
     updateById: async (user_id, data) => {
         const session = getSession();
         try {
-            const updateData = { ...data };
+            const updateData = { 
+                ...data,
+                changed_at: new Date().toISOString()
+            };
+
             if (updateData.deactivated_at === true) {
                 updateData.deactivated_at = new Date().toISOString();
             }
