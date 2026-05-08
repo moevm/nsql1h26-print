@@ -92,12 +92,22 @@
 
             <!-- Роль -->
             <n-gi>
-              <n-form-item label="Роль" path="role">
+              <n-form-item 
+                label="Роль" 
+                path="role"
+                :show-feedback="isRoleDisabled"
+              >
                 <n-select 
                   v-model:value="formData.role" 
                   :options="roleOptions" 
                   placeholder="Выберите роль" 
+                  :disabled="isRoleDisabled"
                 />
+                <template #feedback v-if="isRoleDisabled">
+                  <n-text depth="3" style="font-size: 12px">
+                    Нельзя изменить свою собственную роль
+                  </n-text>
+                </template>
               </n-form-item>
             </n-gi>
 
@@ -189,6 +199,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { usersApi } from '@/api/users';
+import { useUserStore } from '@/stores/userStore';
 import { 
   NCard, NText, NButton, NSpace, NTag, NForm, NFormItem, NInput, NSelect, NGrid, NGi, NModal, NSpin, useNotification 
 } from 'naive-ui';
@@ -202,6 +213,7 @@ const loading = ref(true);
 const formData = ref({});
 const originalData = ref(null);
 const notification = useNotification();
+const userStore = useUserStore();
 
 // Модалка
 const showConfirmModal = ref(false);
@@ -241,6 +253,10 @@ const statusOptions = [
 ];
 
 const uiStatus = ref('active');
+
+const isRoleDisabled = computed(() => {
+  return String(userStore.user?.user_id) === String(route.params.id);
+});
 
 // Синхронизация селекта с данными из БД при загрузке/обновлении
 watch(() => user.value, (newUser) => {
@@ -358,7 +374,7 @@ const saveChanges = async () => {
       first_name: formData.value.first_name,
       last_name: formData.value.last_name,
       phone: formData.value.phone,
-      role: formData.value.role,
+      ...( !isRoleDisabled && { role: formData.value.role }),
       changed_at: new Date().toISOString()
     };
     
