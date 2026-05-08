@@ -190,7 +190,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { usersApi } from '@/api/users';
 import { 
-  NCard, NText, NButton, NSpace, NTag, NForm, NFormItem, NInput, NSelect, NGrid, NGi, NModal, NSpin 
+  NCard, NText, NButton, NSpace, NTag, NForm, NFormItem, NInput, NSelect, NGrid, NGi, NModal, NSpin, useNotification 
 } from 'naive-ui';
 
 const route = useRoute();
@@ -201,6 +201,7 @@ const user = ref(null);
 const loading = ref(true);
 const formData = ref({});
 const originalData = ref(null);
+const notification = useNotification();
 
 // Модалка
 const showConfirmModal = ref(false);
@@ -366,9 +367,18 @@ const saveChanges = async () => {
     originalData.value = { ...updated };
     formData.value = { ...updated };
     
-    // Показываем уведомление (если есть useNotification)
+    notification.success({
+      title: 'Успешно',
+      content: 'Пользователь успешно обновлен',
+      duration: 3000,
+    });
     console.log('Пользователь обновлён');
   } catch (err) {
+    notification.error({
+      title: 'Ошибка',
+      content: 'Ошибка при обновлении пользователя',
+      duration: 5000,
+    });
     console.error('Failed to update user:', err);
   }
 };
