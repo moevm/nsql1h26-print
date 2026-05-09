@@ -42,9 +42,35 @@ export const exportDatabase = async (req, res) => {
                 status: 'failed'
             });
         } catch (logError) {
-            console.error('Failed to save export log:', logError.message);
+            console.error('Не удалось сохранить лог экспорта:', logError.message);
         }
 
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const importDatabase = async (req, res) => {
+    const adminUserId = req.user?.user_id;
+    if (!req.file) {
+        return res.status(400).json({ error: 'Не передан файл импорта (multipart поле: file)' });
+    }
+    try {
+        const payload = JSON.parse(req.file.buffer.toString('utf-8'));
+        const result = await Database.importFromPayload(payload, adminUserId);
+        res.json({
+            format: 'json',
+            ...result
+        });
+    } catch (error) {
+        try {
+            await Database.createImportExportLog({
+                adminUserId,
+                operationType: 'import',
+                status: 'failed'
+            });
+        } catch (logError) {
+            console.error('Не удалось сохранить лог импорта:', logError.message);
+        }
         res.status(500).json({ error: error.message });
     }
 };

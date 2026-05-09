@@ -199,9 +199,9 @@ export const seedDatabase = async () => {
             );
         }
 
-        console.log('Seed completed: 8 users, 6 services, 8 orders, 10 status histories, 10 import/export logs');
+        console.log('Сидирование завершено: 8 пользователей, 6 услуг, 8 заказов, 10 историй статусов, 10 логов импорта/экспорта');
     } catch (e) {
-        console.error('Seed error:', e.message);
+        console.error('Ошибка сидирования:', e.message);
     } finally {
         await session.close();
     }
