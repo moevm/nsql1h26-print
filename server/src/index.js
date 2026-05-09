@@ -4,6 +4,7 @@ import userRoutes from './routes/userRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import serviceRoutes from './routes/serviceRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
+import databaseRoutes from './routes/databaseRoutes.js';
 import driver from './config/db.js';
 import { seedDatabase } from './scripts/seeds.js';
 
@@ -20,6 +21,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/database', databaseRoutes);
 
 const PORT = 3000;
 
