@@ -55,6 +55,15 @@ const routes = [
           requiresAuth: true,
           requiresAdmin: true 
         }
+      },
+      {
+        path: 'admin/import-export',
+        name: 'AdminImportExport',
+        component: () => import('@/pages/admin/ImportExport.vue'),
+        meta: { 
+          requiresAuth: true,
+          requiresAdmin: true 
+        }
       }
     ],
   },

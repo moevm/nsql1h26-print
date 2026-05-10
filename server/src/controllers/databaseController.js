@@ -25,7 +25,10 @@ export const exportDatabase = async (req, res) => {
             operationType: 'export',
             status: 'success'
         });
-
+        res.setHeader(
+            'Access-Control-Expose-Headers', 
+            'X-Export-Nodes-Count, X-Export-Relationships-Count, X-Export-Server-Path, Content-Disposition'
+        );
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
         res.setHeader('X-Export-Nodes-Count', String(payload.nodes.length));

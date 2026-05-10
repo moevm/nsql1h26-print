@@ -10,7 +10,7 @@ RUN pnpm install --frozen-lockfile --filter @nosql/server --prod
 
 COPY server ./server
 
-RUN mkdir -p ./uploads/orders && chmod 777 ./uploads/orders
+RUN mkdir -p ./uploads/orders && mkdir -p ./uploads/exports && chmod 777 -R ./uploads
 
 USER node
 
