@@ -2,7 +2,7 @@ import { getSession } from '../config/db.js';
 
 const formatProperties = (properties) => {
     const formatted = { ...properties };
-    ['created_at', 'deactivated_at'].forEach(field => {
+    ['created_at', 'deactivated_at', 'changed_at'].forEach(field => {
         if (formatted[field] && typeof formatted[field].toString === 'function') {
             formatted[field] = formatted[field].toString();
         }
@@ -25,6 +25,7 @@ export const User = {
                             u.phone = $phone,
                             u.role = $role,
                             u.created_at = datetime(),
+                            u.changed_at = datetime(),
                             u.deactivated_at = null
                          RETURN u, (u.created_at IS NOT NULL) as is_new`,
                 {
@@ -48,7 +49,7 @@ export const User = {
     find: async (filters = {}) => {
         const session = getSession();
         try {
-            let query = 'MATCH (u:User) WHERE u.deactivated_at IS NULL ';
+            let query = 'MATCH (u:User)';
             const params = {};
             const clauses = [];
 
@@ -96,7 +97,7 @@ export const User = {
             }
 
             if (clauses.length > 0) {
-                query += 'AND ' + clauses.join(' AND ');
+                query += ' WHERE ' + clauses.join(' AND ');
             }
             query += ' RETURN u';
 
@@ -127,11 +128,50 @@ export const User = {
         const session = getSession();
         try {
             const result = await session.run(
-                'MATCH (u:User {user_id: $user_id}) RETURN u',
+                `MATCH (u:User {user_id: $user_id})
+                
+                OPTIONAL MATCH (u)-[:PLACED_ORDER]->(o_created:Order)
+                WITH u, 
+                    coalesce(sum(o_created.base_price * o_created.quantity * o_created.file_pages), 0) as total_created_sum,
+                    max(o_created.created_at) as last_order_at
+                
+                OPTIONAL MATCH (u)<-[:CHANGED_BY]-(h_all:StatusHistory)
+                WITH u, total_created_sum, last_order_at, max(h_all.changed_at) as last_status_change_at
+                
+                OPTIONAL MATCH (u)<-[:CHANGED_BY]-(h_ready:StatusHistory {new_status: 'ready'})<-[:HAS_STATUS_HISTORY]-(o_ready:Order)
+                WHERE o_ready.status IN ['ready', 'completed']
+                WITH u, total_created_sum, last_order_at, last_status_change_at, collect(DISTINCT o_ready) as distinct_orders
+                
+                WITH u, total_created_sum, last_order_at, last_status_change_at,
+                    reduce(total = 0, o IN distinct_orders | total + coalesce(o.base_price * o.quantity * o.file_pages, 0)) as total_processed_sum
+                
+                RETURN u, total_created_sum, last_order_at, last_status_change_at, total_processed_sum`,
                 { user_id }
             );
+            
             if (result.records.length === 0) return null;
-            return formatProperties(result.records[0].get('u').properties);
+            
+            const record = result.records[0];
+            const userData = formatProperties(record.get('u').properties);
+            
+            const lastOrderAt = record.get('last_order_at');
+            const lastStatusChangeAt = record.get('last_status_change_at');
+            
+            const dates = [];
+            if (lastOrderAt) dates.push(new Date(lastOrderAt).getTime());
+            if (lastStatusChangeAt) dates.push(new Date(lastStatusChangeAt).getTime());
+            
+            const lastActionAt = dates.length > 0 
+                ? new Date(Math.max(...dates)).toISOString() 
+                : null;
+            
+            userData.last_order_at = lastOrderAt ? new Date(lastOrderAt).toISOString() : null;
+            userData.last_status_change_at = lastStatusChangeAt ? new Date(lastStatusChangeAt).toISOString() : null;
+            userData.last_action_at = lastActionAt;
+            userData.total_created_sum = Number(record.get('total_created_sum') || 0);
+            userData.total_processed_sum = Number(record.get('total_processed_sum') || 0);
+            
+            return userData;
         } finally {
             await session.close();
         }
@@ -140,7 +180,11 @@ export const User = {
     updateById: async (user_id, data) => {
         const session = getSession();
         try {
-            const updateData = { ...data };
+            const updateData = { 
+                ...data,
+                changed_at: new Date().toISOString()
+            };
+
             if (updateData.deactivated_at === true) {
                 updateData.deactivated_at = new Date().toISOString();
             }
