@@ -77,12 +77,6 @@ const initDatabase = async () => {
         if (process.env.NODE_ENV === 'development') {
             await seedDatabase();
         }
-
-        for (const query of constraints) {
-            await session.run(query);
-            console.log(`Constraint created: ${query.substring(0, 60)}...`);
-        }
-        console.log('Database constraints initialized');
     } catch (error) {
         console.error('Database initialization error:', error);
     } finally {
