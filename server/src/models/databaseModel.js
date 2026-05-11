@@ -1,5 +1,6 @@
 ﻿import fs from 'fs/promises';
 import path from 'path';
+import neo4j from 'neo4j-driver';
 import { getSession } from '../config/db.js';
 
 const LABEL_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -128,6 +129,49 @@ export const Database = {
             );
 
             return fallbackResult.records.length > 0;
+        } finally {
+            await session.close();
+        }
+    },
+
+    getImportExportLogs: async ({
+        limit = 10,
+        offset = 0,
+        operationType = null,
+        status = null
+    } = {}) => {
+        const session = getSession();
+        try {
+            const result = await session.run(
+                `MATCH (a:User)-[:INITIATED_OPERATION]->(l:ImportExportLogs)
+                 WHERE ($operationType IS NULL OR l.operation_type = $operationType)
+                   AND ($status IS NULL OR l.status = $status)
+                 RETURN l, a
+                 ORDER BY l.created_at DESC
+                 SKIP $offset
+                 LIMIT $limit`,
+                {
+                    operationType,
+                    status,
+                    offset: neo4j.int(Number(offset)),
+                    limit: neo4j.int(Number(limit))
+                }
+            );
+            return result.records.map((record) => {
+                const logNode = record.get('l');
+                const adminNode = record.get('a');
+                const logProps = toPrimitive(logNode.properties);
+                const adminProps = toPrimitive(adminNode.properties);
+                return {
+                    ...logProps,
+                    admin: {
+                        user_id: adminProps.user_id,
+                        email: adminProps.email,
+                        first_name: adminProps.first_name,
+                        last_name: adminProps.last_name
+                    }
+                };
+            });
         } finally {
             await session.close();
         }

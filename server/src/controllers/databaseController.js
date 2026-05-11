@@ -77,3 +77,44 @@ export const importDatabase = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getImportExportLogs = async (req, res) => {
+    try {
+        const limit = Number(req.query.limit ?? 50);
+        const offset = Number(req.query.offset ?? 0);
+        const operationType = req.query.operation_type || null;
+        const status = req.query.status || null;
+
+        if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
+            return res.status(400).json({ error: 'Параметр limit должен быть целым числом от 1 до 200' });
+        }
+
+        if (!Number.isInteger(offset) || offset < 0) {
+            return res.status(400).json({ error: 'Параметр offset должен быть целым числом >= 0' });
+        }
+
+        if (operationType && !['import', 'export'].includes(operationType)) {
+            return res.status(400).json({ error: "Параметр operation_type может быть только 'import' или 'export'" });
+        }
+
+        if (status && !['success', 'failed'].includes(status)) {
+            return res.status(400).json({ error: "Параметр status может быть только 'success' или 'failed'" });
+        }
+
+        const logs = await Database.getImportExportLogs({
+            limit,
+            offset,
+            operationType,
+            status
+        });
+
+        res.json({
+            limit,
+            offset,
+            total: logs.length,
+            logs
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
