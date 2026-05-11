@@ -12,9 +12,12 @@ const SALT_ROUNDS = 10;
 
 export const register = async (req, res) => {
     try {
-        const { password, ...userData } = req.body;
+        const { password, email, ...userData } = req.body;
+        const user = await User.findOne({ email });
+        if (user) return res.status(409).json({ message: 'Пользователь с таким email уже существует' });
         const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
         const newUser = await User.create({
+            email,
             ...userData,
             password_hash
         });
