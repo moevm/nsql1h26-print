@@ -157,7 +157,8 @@ export const Database = {
                     limit: neo4j.int(Number(limit))
                 }
             );
-            return result.records.map((record) => {
+            
+            const logs = result.records.map((record) => {
                 const logNode = record.get('l');
                 const adminNode = record.get('a');
                 const logProps = toPrimitive(logNode.properties);
@@ -172,6 +173,26 @@ export const Database = {
                     }
                 };
             });
+            
+            const countResult = await session.run(
+                `MATCH (a:User)-[:INITIATED_OPERATION]->(l:ImportExportLogs)
+                WHERE ($operationType IS NULL OR l.operation_type = $operationType)
+                AND ($status IS NULL OR l.status = $status)
+                RETURN COUNT(l) AS total`,
+                {
+                    operationType,
+                    status
+                }
+            );
+            
+            const total = countResult.records[0].get('total').toNumber ? 
+                countResult.records[0].get('total').toNumber() : 
+                countResult.records[0].get('total');
+            
+            return {
+                logs,
+                total
+            };
         } finally {
             await session.close();
         }

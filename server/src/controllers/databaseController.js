@@ -101,7 +101,7 @@ export const getImportExportLogs = async (req, res) => {
             return res.status(400).json({ error: "Параметр status может быть только 'success' или 'failed'" });
         }
 
-        const logs = await Database.getImportExportLogs({
+        const result = await Database.getImportExportLogs({
             limit,
             offset,
             operationType,
@@ -111,8 +111,8 @@ export const getImportExportLogs = async (req, res) => {
         res.json({
             limit,
             offset,
-            total: logs.length,
-            logs
+            total: result.total,
+            logs: result.logs
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
