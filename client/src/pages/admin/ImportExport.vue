@@ -1,27 +1,78 @@
 <template>
   <div class="import-export-container">
-    <n-card title="Управление данными" :bordered="false" class="control-card">
-      <n-space justify="center" size="large">
-        <!-- Кнопка экспорта -->
-        <n-button 
-          type="primary" 
-          size="large"
-          :loading="exportLoading"
-          @click="handleExportWithSave"
-        >
-          Экспорт данных
-        </n-button>
+    <n-card :bordered="false" class="control-card">
+      <template #header>
+        <div class="card-header">
+          <span class="header-title">Управление данными</span>
+          <n-space>
+            <n-button 
+              type="primary" 
+              size="small"
+              :loading="exportLoading"
+              @click="handleExportWithSave"
+            >
+              <template #icon>
+                <n-icon><LogOutOutline /></n-icon>
+              </template>
+              Экспорт
+            </n-button>
 
-        <!-- Кнопка импорта -->
-        <n-button 
-          type="primary" 
-          size="large"
-          :loading="importLoading"
-          @click="handleImportClick"
-        >
-          Импорт данных
-        </n-button>
-      </n-space>
+            <n-button 
+              type="primary" 
+              size="small"
+              :loading="importLoading"
+              @click="handleImportClick"
+            >
+              <template #icon>
+                <n-icon><LogInOutline /></n-icon>
+              </template>
+              Импорт
+            </n-button>
+          </n-space>
+        </div>
+      </template>
+
+      <!-- История логов -->
+      <div class="logs-section">
+        <div class="logs-header">
+          <span class="logs-title">История операций</span>
+          <n-space>
+            <n-select
+              v-model:value="filters.operationType"
+              placeholder="Тип операции"
+              clearable
+              size="small"
+              :options="operationOptions"
+              style="width: 130px"
+              @update:value="handleFilterChange"
+            />
+            <n-select
+              v-model:value="filters.status"
+              placeholder="Статус"
+              clearable
+              size="small"
+              :options="statusOptions"
+              style="width: 120px"
+              @update:value="handleFilterChange"
+            />
+            <n-button size="small" @click="refreshLogs">
+              <template #icon>
+                <n-icon><RefreshOutline /></n-icon>
+              </template>
+            </n-button>
+          </n-space>
+        </div>
+
+        <n-data-table
+          :columns="columns"
+          :data="logs"
+          :loading="logsLoading"
+          :pagination="pagination"
+          :remote="true"
+          :bordered="false"
+          size="small"
+        />
+      </div>
     </n-card>
 
     <!-- Модальное окно для выбора файла импорта -->
@@ -67,16 +118,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive, onMounted, h, computed } from 'vue'
 import { 
   NCard, 
   NSpace, 
   NButton, 
+  NIcon,
   NModal, 
   NText, 
   NUpload,
+  NDataTable,
+  NSelect,
+  NTag,
   useNotification 
 } from 'naive-ui'
+import { 
+  FolderOpenOutline,
+  RefreshOutline,
+  LogInOutline,
+  LogOutOutline 
+} from '@vicons/ionicons5'
 import { databaseApi } from '@/api/database'
 
 const exportLoading = ref(false)
@@ -84,50 +145,184 @@ const importLoading = ref(false)
 const showImportModal = ref(false)
 const selectedFile = ref(null)
 const selectedFileObj = ref(null)
+const logsLoading = ref(false)
+const logs = ref([])
+const totalLogs = ref(0)
+
+// Пагинация
+const currentPage = ref(1)
+const pageSize = ref(10)
+
+const pagination = reactive({
+  page: 1,
+  pageSize: 10,
+  itemCount: 0,
+  showSizePicker: true,
+  pageSizes: [5, 10, 20],
+  prefix: ({ itemCount }) => `Всего: ${itemCount}`,
+  // Эти функции Naive UI вызовет сам при клике на стрелки или цифры
+  onChange: (page) => {
+    pagination.page = page
+    loadLogs() // вызываем загрузку
+  },
+  onUpdatePageSize: (pageSize) => {
+    pagination.pageSize = pageSize
+    pagination.page = 1
+    loadLogs()
+  }
+})
 
 const notification = useNotification()
 
+// Фильтры
+const filters = reactive({
+  operationType: null,
+  status: null
+})
+
+const operationOptions = [
+  { label: 'Импорт', value: 'import' },
+  { label: 'Экспорт', value: 'export' }
+]
+
+const statusOptions = [
+  { label: 'Успешно', value: 'success' },
+  { label: 'Ошибка', value: 'failed' }
+]
+
+// Колонки таблицы
+const columns = [
+  {
+    title: 'ID',
+    key: 'log_id',
+    width: 150,
+    align: 'center'
+  },
+  {
+    title: 'Тип',
+    key: 'operation_type',
+    width: 100,
+    render(row) {
+      const typeMap = {
+        import: { label: 'Импорт', type: 'info' },
+        export: { label: 'Экспорт', type: 'primary' }
+      }
+      const config = typeMap[row.operation_type]
+      return h(NTag, { type: config.type, size: 'small' }, { default: () => config.label })
+    }
+  },
+  {
+    title: 'Статус',
+    key: 'status',
+    width: 100,
+    render(row) {
+      const statusMap = {
+        success: { label: 'Успех', type: 'success' },
+        failed: { label: 'Ошибка', type: 'error' }
+      }
+      const config = statusMap[row.status]
+      return h(NTag, { type: config.type, size: 'small' }, { default: () => config.label })
+    }
+  },
+  {
+    title: 'Дата',
+    key: 'created_at',
+    width: 180,
+    render(row) {
+      return new Date(row.created_at).toLocaleString('ru-RU')
+    }
+  },
+  {
+    title: 'Администратор',
+    key: 'admin_user_id',
+    width: 150,
+    render(row) {
+      if (row.admin && (row.admin.first_name || row.admin.last_name)) {
+        return `${row.admin.first_name || ''} ${row.admin.last_name || ''}`.trim()
+      }
+      return row.admin?.email || 'Система'
+    }
+  }
+]
+
+// Загрузка логов
+const loadLogs = async () => {
+  logsLoading.value = true
+  try {
+    const offset = (pagination.page - 1) * pagination.pageSize
+    
+    const result = await databaseApi.getImportExportLogs({
+      limit: pagination.pageSize,
+      offset: offset,
+      operationType: filters.operationType,
+      status: filters.status
+    })
+    
+    logs.value = result.logs || []
+    pagination.itemCount = result.total || 0
+    
+  } catch (error) {
+    console.error('Ошибка загрузки логов:', error)
+    notification.error({ title: 'Ошибка', content: 'Не удалось загрузить историю' })
+  } finally {
+    logsLoading.value = false
+  }
+}
+
+// Обновление логов
+const refreshLogs = () => {
+  pagination.page = 1
+  loadLogs()
+}
+
+// Смена фильтра
+const handleFilterChange = () => {
+  pagination.page = 1
+  loadLogs()
+}
+
+// Экспорт
 const handleExportWithSave = async () => {
-  exportLoading.value = true;
+  exportLoading.value = true
   
   try {
-    const { blob, filename, serverPath, nodesCount, relationshipsCount } = await databaseApi.exportDatabase(true);
+    const { blob, filename, serverPath, nodesCount, relationshipsCount } = await databaseApi.exportDatabase(true)
     
-    // Скачиваем файл
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
     
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
     
     notification.success({
       title: 'Успех',
       content: `Экспорт завершен. Файл сохранен на сервере: ${serverPath}\n${nodesCount} узлов, ${relationshipsCount} связей`,
       duration: 5000
-    });
-
+    })
+    
+    refreshLogs()
   } catch (error) {
-    console.error('Ошибка экспорта:', error);
+    console.error('Ошибка экспорта:', error)
     notification.error({
       title: 'Ошибка',
       content: error.response?.data?.error || 'Ошибка при экспорте данных',
       duration: 3000
-    });
+    })
   } finally {
-    exportLoading.value = false;
+    exportLoading.value = false
   }
-};
+}
 
-// Обработчик импорта - открытие модального окна
+// Импорт
 const handleImportClick = () => {
-  showImportModal.value = true;
-  selectedFile.value = null;
-  selectedFileObj.value = null;
-};
+  showImportModal.value = true
+  selectedFile.value = null
+  selectedFileObj.value = null
+}
 
 const handleFileUpload = async ({ file, onFinish, onError }) => {
   try {
@@ -216,7 +411,9 @@ const confirmImport = async () => {
     
     showImportModal.value = false
     selectedFile.value = null
-    selectedFileObj.value = null 
+    selectedFileObj.value = null
+    
+    refreshLogs()
     
   } catch (error) {
     console.error('Ошибка импорта:', error)
@@ -229,11 +426,16 @@ const confirmImport = async () => {
     importLoading.value = false
   }
 }
+
+// Загружаем логи при монтировании
+onMounted(() => {
+  loadLogs()
+})
 </script>
 
 <style scoped>
 .import-export-container {
-  min-height: 50vh;
+  min-height: 70vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -242,7 +444,35 @@ const confirmImport = async () => {
 
 .control-card {
   width: 100%;
-  max-width: 500px;
+  max-width: 1200px;
   box-shadow: var(--shadow);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.header-title {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.logs-section {
+  margin-top: 20px;
+}
+
+.logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.logs-title {
+  font-size: 16px;
+  font-weight: 500;
 }
 </style>

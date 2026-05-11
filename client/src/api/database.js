@@ -42,4 +42,16 @@ export const databaseApi = {
     
     return response.data;
   },
+
+  async getImportExportLogs(params = {}) {
+    const response = await axiosInstance.get('/database/logs', {
+      params: {
+        limit: params.limit ?? 10,
+        offset: params.offset ?? 0,
+        operation_type: params.operationType,
+        status: params.status
+      }
+    });
+    return response.data;
+  }
 };
