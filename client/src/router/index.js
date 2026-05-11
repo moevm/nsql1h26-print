@@ -55,6 +55,18 @@ const routes = [
           requiresAuth: true,
           requiresAdmin: true 
         }
+      },
+      {
+        path: '/prices',
+        name: 'prices',
+        component: () => import('@/pages/Prices.vue'),
+        meta: { requiresAuth: false }
+      },
+      {
+        path: '/admin/services',
+        name: 'admin-services',
+        component: () => import('@/pages/admin/ServiceManagement.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true }
       }
     ],
   },
