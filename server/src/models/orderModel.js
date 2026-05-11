@@ -250,11 +250,22 @@ export const Order = {
         }
     },
 
-    update: async (orderId, updateData, userId) => {
+    update: async (orderId, updateData, userId, userRole) => {
         const session = getSession();
         try {
             const status = updateData.status;
             const notes = updateData.notes || '';
+
+            const isPendingStatus = status === 'pending';
+            const isOtherStatus = status !== 'pending';
+
+            if ((userRole === 'employee' || userRole === 'admin') && isPendingStatus) {
+                throw new Error('FORBIDDEN_STATUS_CHANGE');
+            }
+            
+            if (userRole === 'client' && isOtherStatus) {
+                throw new Error('FORBIDDEN_STATUS_CHANGE');
+            }
             const result = await session.run(
                 `MATCH (o:Order {order_id: $orderId})
             MATCH (u:User {user_id: $userId})
