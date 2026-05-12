@@ -63,10 +63,13 @@ const routes = [
         meta: { requiresAuth: false }
       },
       {
-        path: '/admin/services',
-        name: 'admin-services',
-        component: () => import('@/pages/admin/ServiceManagement.vue'),
-        meta: { requiresAuth: true, requiresAdmin: true }
+        path: '/admin/users/:id',
+        name: 'admin-user-detail',
+        component: () => import('@/pages/admin/UserDetail.vue'),
+        meta: { 
+          requiresAuth: true, 
+          requiresAdmin: true 
+        }
       }
     ],
   },

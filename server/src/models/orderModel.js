@@ -62,7 +62,12 @@ export const Order = {
             })
             CREATE (o)-[:HAS_STATUS_HISTORY]->(h)
             CREATE (h)-[:CHANGED_BY]->(u)
-            RETURN o, h, o.base_price * o.quantity * o.file_pages AS total_amount`,
+            RETURN o, h,
+                   o.base_price * o.quantity *
+                   CASE
+                       WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1
+                       ELSE coalesce(o.file_pages, 0)
+                   END AS total_amount`,
                 {
                     userId,
                     serviceId,
@@ -174,7 +179,11 @@ export const Order = {
                    u.email as user_email,
                    u.user_id as user_id,
                    s.service_type as service_type,
-                   o.base_price * o.quantity * o.file_pages AS total_amount
+                   o.base_price * o.quantity *
+                   CASE
+                       WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1
+                       ELSE coalesce(o.file_pages, 0)
+                   END AS total_amount
                    ORDER BY o.created_at DESC`;
 
             const result = await session.run(query, params);
@@ -219,7 +228,11 @@ export const Order = {
                 o,
                 s.service_type AS service_type,
                 status_history,
-                o.base_price * o.quantity * o.file_pages AS total_amount`,
+                o.base_price * o.quantity *
+                CASE
+                    WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1
+                    ELSE coalesce(o.file_pages, 0)
+                END AS total_amount`,
                 { orderId }
             );
             const record = result.records[0];
