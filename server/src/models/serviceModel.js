@@ -81,15 +81,23 @@ export const Service = {
         const session = getSession();
         try {
             const updateData = { ...data };
+
             if (updateData.deactivated_at === true) {
                 updateData.deactivated_at = new Date().toISOString();
+            } else if (updateData.deactivated_at === false) {
+                updateData.deactivated_at = null;
             }
-            const updateQuery = updateData.base_price
-                    'MATCH (s:Service {service_id: $service_id}) SET s += $data, s.changed_at = datetime() RETURN s',
-                    { service_id, data: updateData }
-            const result = await session.run(updateQuery, { service_id, data: updateData });
+
+            const result = await session.run(
+                'MATCH (s:Service {service_id: $service_id}) SET s += $data, s.changed_at = datetime() RETURN s',
+                { service_id, data: updateData }
+            );
+
             if (result.records.length === 0) return null;
             return formatProperties(result.records[0].get('s').properties);
+        } catch (error) {
+            console.error('Ошибка в Service.update:', error);
+            throw error;
         } finally {
             await session.close();
         }
