@@ -58,7 +58,10 @@ const menuOptions = computed(() => {
   ]
   
   if (userStore.user?.role === 'admin') {
-    baseOptions.push({ label: 'Пользователи', key: 'admin-users' })
+    baseOptions.push(
+      { label: 'Пользователи', key: 'admin-users' },
+      { label: 'Управление данными', key: 'admin-data' }
+    )
   }
   
   return baseOptions
@@ -72,6 +75,8 @@ const handleMenuSelect = (key) => {
     router.push('/prices')
   } else if (key === 'admin-users') { 
     router.push('/admin/users')
+  } else if (key === 'admin-data') {
+    router.push('/admin/import-export')
   }
 }
 
@@ -98,6 +103,8 @@ const syncActiveTab = () => {
     activeTab.value = 'prices'
   } else if (route.path === '/admin/users') {
     activeTab.value = 'admin-users'
+  } else if (route.path === '/admin/import-export') {
+    activeTab.value = 'admin-data'
   }
 }
 
