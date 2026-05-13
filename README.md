@@ -20,13 +20,28 @@
 
 ## Отладочные пользователи    
 **Клиент:**  
-Email: client@print.local  
+Email: client1@print.local  
+Пароль: client123
+
+Email: client2@print.local  
+Пароль: client123
+
+Email: client3@print.local  
+Пароль: client123
+
+Email: client4@print.local  
 Пароль: client123
 
 **Админ:**  
 Email: admin@print.local  
 Пароль: admin123
 
+Email: admin2@print.local  
+Пароль: admin123
+
 **Сотрудник:**  
-Email: emp@print.local  
+Email: emp1@print.local  
+Пароль: emp123
+
+Email: emp2@print.local  
 Пароль: emp123
