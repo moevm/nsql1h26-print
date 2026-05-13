@@ -57,6 +57,14 @@ const routes = [
         }
       },
       {
+<<<<<<< price
+        path: '/prices',
+        name: 'prices',
+        component: () => import('@/pages/Prices.vue'),
+        meta: { requiresAuth: false }
+      },
+      {
+=======
         path: 'admin/import-export',
         name: 'AdminImportExport',
         component: () => import('@/pages/admin/ImportExport.vue'),
@@ -66,6 +74,7 @@ const routes = [
         }
       },
       {  
+>>>>>>> main
         path: '/admin/users/:id',
         name: 'admin-user-detail',
         component: () => import('@/pages/admin/UserDetail.vue'),

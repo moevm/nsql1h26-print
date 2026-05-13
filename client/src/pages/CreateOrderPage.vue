@@ -99,6 +99,16 @@
           <template #header>
             Стоимость: {{ calculatedCost }} руб.
           </template>
+          <div class="calculation-details">
+            <div v-if="pageCount && pageCount > 0">
+              Расчёт: {{ serviceData.base_price }} ₽ (базовая цена) × {{ pageCount }} стр. × {{ formData.quantity }} шт. 
+              = {{ calculatedCost }} ₽
+            </div>
+            <div v-else>
+              Расчёт: {{ serviceData.base_price }} ₽ (базовая цена) × {{ formData.quantity }} шт. 
+              = {{ calculatedCost }} ₽
+            </div>
+          </div>
         </n-alert>
 
         <!-- Поле комментария (появляется после расчета) -->
