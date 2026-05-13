@@ -223,13 +223,13 @@ onMounted(loadServices);
 <style scoped>
 .prices-page {
   padding: 32px;
-  min-height: calc(100vh - 160px);
-  background-color: #f5f7fa;
+  min-height: 70vh
 }
 .prices-card {
   max-width: 1200px;
   margin: 0 auto;
   border-radius: 15px;
+  background-color: #f5f7fa;
 }
 .prices-title {
   margin: 0;
