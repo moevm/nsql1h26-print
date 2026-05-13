@@ -20,7 +20,7 @@
 
 ## Отладочные пользователи    
 **Клиент:**  
-Email: client1@print.local
+Email: client1@print.local  
 Пароль: client123
 
 Email: client2@print.local  
