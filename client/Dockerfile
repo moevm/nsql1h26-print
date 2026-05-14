@@ -1,6 +1,6 @@
-FROM node:26-alpine3.23 AS build
+FROM node:26.1.0-trixie-slim AS build
 
-RUN corepack enable
+RUN  npm install -g corepack && corepack enable
 
 WORKDIR /app
 

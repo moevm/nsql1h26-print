@@ -1,6 +1,7 @@
 FROM node:26-alpine3.23 AS production
 
-RUN corepack enable
+RUN  npm install -g corepack && corepack enable
+
 WORKDIR /app
 
 COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
