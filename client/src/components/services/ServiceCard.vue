@@ -3,7 +3,7 @@
     <template #header>
       <div class="service-header">
         <n-text strong class="service-type-title">
-          {{ props.service_type }}
+          {{ getServiceDisplayName(props.service_type) }}
         </n-text>
       </div>
     </template>
@@ -43,6 +43,16 @@ const props = defineProps({
     required: true,
   },
 });
+
+const serviceMap = {
+  print: 'Печать',
+  scan: 'Сканирование',
+  risography: 'Ризография'
+}
+
+const getServiceDisplayName = (serviceType) => {
+  return serviceMap[serviceType] || serviceType
+}
 
 const router = useRouter()
 const defaultImage = '/images/default.jpg';
