@@ -1,4 +1,4 @@
-FROM node:lts-alpine AS build
+FROM node:26-alpine3.23 AS build
 
 RUN corepack enable
 

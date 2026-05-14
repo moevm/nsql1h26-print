@@ -1,4 +1,4 @@
-FROM node:lts-alpine AS production
+FROM node:26-alpine3.23 AS production
 
 RUN corepack enable
 WORKDIR /app
