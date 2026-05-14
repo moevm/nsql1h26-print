@@ -1,4 +1,4 @@
-FROM node:26.1.0-trixie-slim AS build
+FROM node:26-alpine3.23 AS build
 
 RUN  npm install -g corepack && corepack enable
 
