@@ -116,20 +116,14 @@
             <n-space justify="space-between" align="center" :wrap="false">
               <n-space vertical :size="2">
                 <n-space>
-                  <n-tag :type="getStatusType(order.status)" size="small">
-                    {{ statusLabels[order.status] }}
-                  </n-tag>
-                  <n-text strong>№{{ order.order_id.slice(-4) }}</n-text>
+                  <n-tag :type="getStatusType(order.status)" size="small">{{ statusLabels[order.status] }}</n-tag>
+                  <n-text strong>№{{ order.order_id?.slice(0, 8).toUpperCase() }}</n-text>
                   <n-text depth="3">{{ getServiceType(order) }}</n-text>
                 </n-space>
-                <n-text depth="3" style="font-size: 13px;">
-                  {{ getOrderSummary(order) }}
-                </n-text>
+                <n-text depth="3" style="font-size: 13px;">{{ getOrderSummary(order) }}</n-text>
               </n-space>
               <n-space align="center">
-                <n-text depth="2">
-                  {{ order.user_email?.split('@')[0] || order.user_email }}
-                </n-text>
+                <n-text depth="2">{{ order.user_email?.split('@')[0] || order.user_email }}</n-text>
                 <n-button text type="primary">Подробнее →</n-button>
               </n-space>
             </n-space>
@@ -140,32 +134,26 @@
       <n-divider v-if="pendingOrders.length && otherOrders.length" />
 
       <!-- Остальные заказы -->
-      <n-space vertical v-if="filteredOrders.length">
-        <n-card 
-          v-for="order in filteredOrders" 
-          :key="order.order_id" 
-          class="order-item"
-          hoverable
-          @click="viewOrder(order.order_id)"
+      <n-space vertical v-if="sortedOtherOrders.length">
+        <n-card
+            v-for="order in sortedOtherOrders"
+            :key="order.order_id"
+            class="order-item"
+            hoverable
+            @click="viewOrder(order.order_id)"
         >
           <div class="order-row">
             <n-space justify="space-between" align="center" :wrap="false">
               <n-space vertical :size="2">
                 <n-space>
-                  <n-tag :type="getStatusType(order.status)" size="small">
-                    {{ statusLabels[order.status] }}
-                  </n-tag>
-                  <n-text strong>№{{ order.order_id.slice(-4) }}</n-text>
+                  <n-tag :type="getStatusType(order.status)" size="small">{{ statusLabels[order.status] }}</n-tag>
+                  <n-text strong>№{{ order.order_id?.slice(0, 8).toUpperCase() }}</n-text>
                   <n-text depth="3">{{ getServiceType(order) }}</n-text>
                 </n-space>
-                <n-text depth="3" style="font-size: 13px;">
-                  {{ getOrderSummary(order) }}
-                </n-text>
+                <n-text depth="3" style="font-size: 13px;">{{ getOrderSummary(order) }}</n-text>
               </n-space>
               <n-space align="center">
-                <n-text depth="2">
-                  {{ order.user_email?.split('@')[0] || order.user_email }}
-                </n-text>
+                <n-text depth="2">{{ order.user_email?.split('@')[0] || order.user_email }}</n-text>
                 <n-button text type="primary">Подробнее →</n-button>
               </n-space>
             </n-space>
@@ -173,15 +161,20 @@
         </n-card>
       </n-space>
 
-      <n-empty 
-        v-if="!filteredOrders.length && !loading" 
-        description="Нет заказов по заданным фильтрам" 
-        class="empty-state"
-      />
+      <!-- Пустое состояние -->
+      <n-empty v-if="!orders.length && !loading" description="Нет заказов по заданным фильтрам" class="empty-state" />
 
       <template #footer>
-        <n-space justify="center" v-if="showMore">
-          <n-button @click="loadMore" size="small">Показать ещё</n-button>
+        <n-space justify="center" class="pagination-wrapper" v-if="totalOrders > 0">
+          <n-pagination
+              v-model:page="currentPage"
+              v-model:page-size="limitPerPage"
+              :item-count="totalOrders"
+              :page-sizes="[5, 10, 20, 50]"
+              show-size-picker
+              @update:page="handlePageChange"
+              @update:page-size="handlePageSizeChange"
+          />
         </n-space>
       </template>
     </n-card>
@@ -191,24 +184,30 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { NCard, NText, NButton, NSpace, NTag, NInput, NDivider, NEmpty, NSelect, NDatePicker } from 'naive-ui';
+import {
+  NCard, NText, NButton, NSpace, NTag, NInput,
+  NDivider, NEmpty, NSelect, NDatePicker, NPagination
+} from 'naive-ui';
 import { ordersApi } from '@/api/orders';
 
 const router = useRouter();
 const orders = ref([]);
 const loading = ref(false);
 const sortBy = ref('newest');
-const visibleCount = ref(5);
+
+const currentPage = ref(1);
+const limitPerPage = ref(10);
+const totalOrders = ref(0);
 
 const filters = ref({
   orderId: '',
   status: null,
   serviceType: null,
   dateRange: null,
-  userEmail: '',          // почта клиента
-  colorMode: null,        // 'color' / 'bw'
-  format: null,             // например 'A4', 'A5'
-  changedBy: null         // ID сотрудника
+  userEmail: '',
+  colorMode: null,
+  format: null,
+  changedBy: null
 });
 
 const statusLabels = {
@@ -234,8 +233,7 @@ const getServiceType = (order) => {
   if (order.service_name) return serviceMap[order.service_name] || order.service_name;
   try {
     const p = typeof order.parameters === 'string' ? JSON.parse(order.parameters) : order.parameters;
-    const type = p?.service_type || p?.type;
-    return serviceMap[type] || type || 'Заказ';
+    return serviceMap[p?.service_type || p?.type] || p?.service_type || p?.type || 'Заказ';
   } catch { return 'Заказ'; }
 };
 
@@ -254,7 +252,11 @@ const getOrderSummary = (order) => {
 const loadOrders = async () => {
   loading.value = true;
   try {
-    const params = {};
+    const params = {
+      page: currentPage.value,
+      limit: limitPerPage.value
+    };
+
     if (filters.value.status) params.status = filters.value.status;
     if (filters.value.serviceType) params.service_type = filters.value.serviceType;
     if (filters.value.dateRange && Array.isArray(filters.value.dateRange)) {
@@ -266,10 +268,12 @@ const loadOrders = async () => {
     if (filters.value.colorMode) params.color_mode = filters.value.colorMode;
     if (filters.value.format) params.format = filters.value.format;
     if (filters.value.changedBy) params.changed_by = filters.value.changedBy;
-    if (filters.value.orderId) params.order_id = filters.value.orderId; // тоже на сервер
+    if (filters.value.orderId) params.order_id = filters.value.orderId;
 
-    const data = await ordersApi.getAll(params);
-    orders.value = Array.isArray(data) ? data : (data.orders || []);
+    const responseData = await ordersApi.getAll(params);
+
+    orders.value = responseData?.items || [];
+    totalOrders.value = responseData?.total || 0;
   } catch (err) {
     console.error('Failed to load orders:', err);
   } finally {
@@ -285,42 +289,45 @@ const otherOrders = computed(() =>
   orders.value.filter(o => o.status?.toLowerCase().trim() !== 'pending')
 );
 
-const filteredOrders = computed(() => {
+const sortedOtherOrders = computed(() => {
   let list = [...otherOrders.value];
   if (sortBy.value === 'newest') {
     list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   } else if (sortBy.value === 'type') {
     list.sort((a, b) => getServiceType(a).localeCompare(getServiceType(b)));
   }
-  return list.slice(0, visibleCount.value);
+  return list;
 });
 
-const showMore = computed(() => visibleCount.value < otherOrders.value.length);
+const handlePageChange = (page) => {
+  currentPage.value = page;
+  loadOrders();
+};
 
-// При изменении серверных фильтров перезагружаем данные и сбрасываем пагинацию
-watch(
-  () => [
-    filters.value.status, filters.value.serviceType, filters.value.dateRange,
-    filters.value.userEmail, filters.value.colorMode, filters.value.format,
-    filters.value.changedBy, filters.value.orderId
-  ],
-  () => {
-    visibleCount.value = 5;
-    loadOrders();
-  },
-  { deep: true }
-);
+const handlePageSizeChange = (pageSize) => {
+  limitPerPage.value = pageSize;
+  currentPage.value = 1;
+  loadOrders();
+};
 
-// При изменении поиска по номеру или сортировки сбрасываем пагинацию без перезапроса
 watch(
-  () => [filters.value.orderId, sortBy.value],
-  () => { visibleCount.value = 5; }
+    () => [
+      filters.value.status, filters.value.serviceType, filters.value.dateRange,
+      filters.value.userEmail, filters.value.colorMode, filters.value.format,
+      filters.value.changedBy, filters.value.orderId
+    ],
+    () => {
+      currentPage.value = 1;
+      loadOrders();
+    },
+    { deep: true }
 );
 
 const viewOrder = (id) => router.push(`/orders/${id}`);
-const loadMore = () => { visibleCount.value += 5; };
 
-onMounted(() => loadOrders());
+onMounted(() => {
+  loadOrders();
+});
 </script>
 
 <style scoped>
@@ -355,6 +362,7 @@ onMounted(() => loadOrders());
 .order-item {
   cursor: pointer;
   transition: transform 0.2s;
+  margin-bottom: 12px;
 }
 
 .order-item:hover {
@@ -374,5 +382,8 @@ onMounted(() => loadOrders());
 
 .empty-state {
   padding: 2rem 0;
+}
+.pagination-wrapper {
+  padding-top: 1rem;
 }
 </style>
