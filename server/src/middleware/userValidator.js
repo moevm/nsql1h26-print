@@ -43,8 +43,9 @@ const validateUserData = (data, isUpdate = false) => {
 
 export const validateRegister = (req, res, next) => {
     req.body = filterFields(req.body, allowedFields);
+    delete req.body.role;
+    delete req.body.deactivated_at;
     const { email, password } = req.body;
-
     if (!email || !password) {
         return res.status(400).json({ message: 'Email и пароль обязательны' });
     }
@@ -56,16 +57,27 @@ export const validateRegister = (req, res, next) => {
 };
 
 export const validateUpdateUser = (req, res, next) => {
+    if (
+        req.user.role !== 'admin' &&
+        String(req.user.id) !== String(req.params.id)
+    ) {
+        return res.status(403).json({
+            message: 'Вы можете обновлять только свой профиль'
+        });
+    }
     req.body = filterFields(req.body, allowedFields);
     delete req.body.email;
-
+    if (req.user.role !== 'admin') {
+        delete req.body.role;
+        delete req.body.deactivated_at;
+    }
     if (Object.keys(req.body).length === 0) {
         return res.status(400).json({ message: 'Нет данных для обновления' });
     }
-
     const errors = validateUserData(req.body, true);
-    if (errors.length > 0) return res.status(400).json({ errors });
-
+    if (errors.length > 0) {
+        return res.status(400).json({ errors });
+    }
     next();
 };
 

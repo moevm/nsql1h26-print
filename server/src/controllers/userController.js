@@ -19,6 +19,7 @@ export const register = async (req, res) => {
         const newUser = await User.create({
             email,
             ...userData,
+            role: 'client',
             password_hash
         });
         const { password_hash: _, ...safeUser } = newUser;
@@ -70,8 +71,8 @@ export const updateUser = async (req, res) => {
         const updateData = { ...req.body };
         if (updateData.password) {
             updateData.password_hash = await bcrypt.hash(updateData.password, SALT_ROUNDS);
-            delete updateData.password;
         }
+        delete updateData.password;
         const updated = await User.updateById(req.params.id, updateData);
         if (!updated) return res.status(404).json({ message: 'Пользователь не найден' });
         const { password_hash: __, ...safeData } = updated;
