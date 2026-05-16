@@ -68,15 +68,15 @@
         size="small"
       />
 
-      <n-space v-else vertical size="14" class="orders-list">
+      <n-space v-else vertical class="orders-list">
         <div
-          v-for="order in visibleOrders"
-          :key="order.order_id"
-          class="order-item"
-          role="button"
-          tabindex="0"
-          @click="goToOrder(order.order_id)"
-          @keydown.enter="goToOrder(order.order_id)"
+            v-for="order in orders"
+            :key="order.order_id"
+            class="order-item"
+            role="button"
+            tabindex="0"
+            @click="goToOrder(order.order_id)"
+            @keydown.enter="goToOrder(order.order_id)"
         >
           <div class="order-main">Заказ №{{ order.number }} {{ order.title }}</div>
 
@@ -93,7 +93,7 @@
           </div>
         </div>
         <n-button
-            v-if="visibleCount < orders.length"
+            v-if="orders.length < total"
             class="show-more-btn"
             @click="showMore"
         >
@@ -105,14 +105,35 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   NSelect,
   NInput,
   NButton,
-  NDatePicker
+  NDatePicker,
+  NCard,
+  NEmpty,
+  NSpace,
+  NTag
 } from 'naive-ui';
+
+const props = defineProps({
+  orders: {
+    type: Array,
+    default: () => []
+  },
+  total: {
+    type: Number,
+    default: 0
+  }
+});
+
+const emit = defineEmits(['filter']);
+const router = useRouter();
+
+const currentPage = ref(1);
+const limitPerPage = 5;
 
 const filters = ref({
   status: null,
@@ -137,23 +158,34 @@ const serviceOptions = [
   { label: 'Печать', value: 'print' },
   { label: 'Сканирование', value: 'scan' },
   { label: 'Ризография', value: 'risography' },
-]
+];
 
-const emit = defineEmits(['filter']);
+const buildParams = () => {
+  const params = {
+    page: currentPage.value,
+    limit: limitPerPage,
+    ...filters.value
+  };
 
-const applyFilters = () => {
-  const params = { ...filters.value };
   if (params.dateRange && Array.isArray(params.dateRange)) {
     const [from, to] = params.dateRange;
     if (from) params.dateFrom = new Date(from).toISOString();
     if (to) params.dateTo = new Date(to).toISOString();
     delete params.dateRange;
   }
+
   Object.keys(params).forEach(key => {
-  if (params[key] === '' || params[key] === null || params[key] === undefined) {
-    delete params[key];
-  }});
-  emit('filter', params);
+    if (params[key] === '' || params[key] === null || params[key] === undefined) {
+      delete params[key];
+    }
+  });
+
+  return params;
+};
+
+const applyFilters = () => {
+  currentPage.value = 1;
+  emit('filter', { ...buildParams(), _mode: 'replace' });
 };
 
 const resetFilters = () => {
@@ -165,25 +197,13 @@ const resetFilters = () => {
     format: null,
     dateRange: null
   };
-  emit('filter', {});
+  currentPage.value = 1;
+  emit('filter', { page: 1, limit: limitPerPage, _mode: 'replace' });
 };
 
-const props = defineProps({
-  orders: {
-    type: Array,
-    default: () => []
-  }
-});
-const router = useRouter();
-
-const visibleCount = ref(5);
-
-const visibleOrders = computed(() => {
-  return props.orders.slice(0, visibleCount.value);
-});
-
 const showMore = () => {
-  visibleCount.value += 5;
+  currentPage.value += 1;
+  emit('filter', { ...buildParams(), _mode: 'append' });
 };
 
 const goToOrder = (orderId) => {
@@ -266,7 +286,7 @@ const getStatusMeta = (status) => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  margin: 20px;
+  margin: 0 20px;
   cursor: pointer;
   transition: background-color 0.15s ease, transform 0.15s ease;
 }
