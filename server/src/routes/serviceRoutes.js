@@ -6,7 +6,7 @@ import {protect, requireAdmin} from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.get('/', serviceController.getServices);
-router.get('/:id', protect, serviceController.getServiceById);
+router.get('/:id', protect, requireAdmin, serviceController.getServiceById);
 router.put('/:id', protect, requireAdmin, validateUpdateService, serviceController.updateService);
 router.post('/', protect, requireAdmin, validateCreateService, serviceController.createService);
 

@@ -34,13 +34,14 @@ export const createOrder = async (req, res) => {
 export const getFile = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
-        if (
-            req.user.role === 'client' &&
-            String(order.user_id) !== String(req.user.user_id)
-        ) {
-            return res.status(403).json({
-                message: 'Доступ запрещён'
-            });
+        if (req.user.role === 'client') {
+            const initialStep = order.status_history.find(h => h.notes === 'initial status' || h.new_status === 'pending');
+            const creatorId = initialStep ? initialStep.user_id : null;
+            if (String(creatorId) !== String(req.user.user_id)) {
+                return res.status(403).json({
+                    message: 'Доступ запрещён'
+                });
+            }
         }
         
         if (!order || !order.file_name) {
@@ -80,13 +81,14 @@ export const getOrderById = async (req, res) => {
                 message: 'Заказ не найден'
             });
         }
-        if (
-            req.user.role === 'client' &&
-            String(order.user_id) !== String(req.user.user_id)
-        ) {
-            return res.status(403).json({
-                message: 'Доступ запрещён'
-            });
+        if (req.user.role === 'client') {
+            const initialStep = order.status_history.find(h => h.notes === 'initial status' || h.new_status === 'pending');
+            const creatorId = initialStep ? initialStep.user_id : null;
+            if (String(creatorId) !== String(req.user.user_id)) {
+                return res.status(403).json({
+                    message: 'Доступ запрещён'
+                });
+            }
         }
         res.json(order);
     } catch (error) {

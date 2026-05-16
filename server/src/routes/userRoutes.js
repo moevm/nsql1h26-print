@@ -7,6 +7,6 @@ const router = express.Router();
 
 router.get('/', protect, requireAdmin, userController.getUsers);
 router.get('/:id', protect, userController.getUserById);
-router.put('/:id', protect, validateUpdateUser, userController.updateUser);
+router.put('/:id', protect, requireAdmin, validateUpdateUser, userController.updateUser);
 
 export default router;

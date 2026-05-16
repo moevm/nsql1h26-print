@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.get('/', protect, requireAdmin, orderController.getOrders);
 router.get('/user/:id', protect, orderController.getOrdersByUser);
-router.put('/:id', protect, validateUpdateOrder, orderController.updateOrder);
+router.put('/:id', protect, requireAdmin, validateUpdateOrder, orderController.updateOrder);
 router.get('/:id/file', protect, orderController.getFile);
 router.post('/', protect, uploadOrderFile, validateCreateOrder, orderController.createOrder);
 router.get('/:id', protect, orderController.getOrderById);
