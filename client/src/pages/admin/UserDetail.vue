@@ -374,7 +374,7 @@ const saveChanges = async () => {
       first_name: formData.value.first_name,
       last_name: formData.value.last_name,
       phone: formData.value.phone,
-      ...( !isRoleDisabled && { role: formData.value.role }),
+      ...( !isRoleDisabled.value && { role: formData.value.role }),
       changed_at: new Date().toISOString()
     };
     
