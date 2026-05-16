@@ -59,11 +59,28 @@ export const getUsers = async (req, res) => {
 };
 
 export const getUserById = async (req, res) => {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: 'Пользователь не найден' });
-
-    const { password_hash: _, ...safeData } = user;
-    res.json(safeData);
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({
+                message: 'Пользователь не найден'
+            });
+        }
+        if (
+            req.user.role !== 'admin' &&
+            String(req.user.user_id) !== String(req.params.id)
+        ) {
+            return res.status(403).json({
+                message: 'Доступ запрещён'
+            });
+        }
+        const { password_hash: _, ...safeData } = user;
+        res.json(safeData);
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
 };
 
 export const updateUser = async (req, res) => {
@@ -71,8 +88,8 @@ export const updateUser = async (req, res) => {
         const updateData = { ...req.body };
         if (updateData.password) {
             updateData.password_hash = await bcrypt.hash(updateData.password, SALT_ROUNDS);
+            delete updateData.password;
         }
-        delete updateData.password;
         const updated = await User.updateById(req.params.id, updateData);
         if (!updated) return res.status(404).json({ message: 'Пользователь не найден' });
         const { password_hash: __, ...safeData } = updated;
