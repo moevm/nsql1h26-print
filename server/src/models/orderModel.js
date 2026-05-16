@@ -103,6 +103,10 @@ export const Order = {
     find: async (filters = {}) => {
         const session = getSession();
         try {
+            const page = parseInt(filters.page, 10) || 1;
+            const limit = parseInt(filters.limit, 10) || 10;
+            const skip = (page - 1) * limit;
+
             let query = 'MATCH (u:User)-[:PLACED_ORDER]->(o:Order)-[:FOR_SERVICE]->(s:Service) ';
             const params = {};
             const clauses = [];
@@ -128,7 +132,6 @@ export const Order = {
                         ELSE ''
                     END CONTAINS toLower($service_type)
                 `);
-
                 params.service_type = filters.service_type;
             }
 
@@ -175,26 +178,44 @@ export const Order = {
                 query += ' WHERE ' + clauses.join(' AND ');
             }
 
-            query += ` RETURN o,
-                   u.email as user_email,
-                   u.user_id as user_id,
-                   s.service_type as service_type,
-                   o.base_price * o.quantity *
-                   CASE
-                       WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1
-                       ELSE coalesce(o.file_pages, 0)
-                   END AS total_amount
-                   ORDER BY o.created_at DESC`;
+            query += `
+                WITH o, u, s
+                ORDER BY o.created_at DESC
+                WITH count(o) as total, collect({
+                    properties: o,
+                    user_email: u.email,
+                    user_id: u.user_id,
+                    service_type: s.service_type,
+                    total_amount: o.base_price * o.quantity *
+                    CASE
+                        WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1
+                        ELSE coalesce(o.file_pages, 0)
+                    END
+                }) as all_items
+                RETURN total, all_items[$skip..$skip+$limit] as paged_items`;
+
+            params.skip = session.int ? session.int(skip) : skip;
+            params.limit = session.int ? session.int(limit) : limit;
 
             const result = await session.run(query, params);
 
-            return result.records.map(record => ({
-                ...formatProperties(record.get('o').properties),
-                user_email: record.get('user_email'),
-                user_id: record.get('user_id'),
-                service_type: record.get('service_type'),
-                total_amount: toNumeric(record.get('total_amount'))
+            if (result.records.length === 0) {
+                return { total: 0, items: [] };
+            }
+
+            const record = result.records[0];
+            const total = toNumeric(record.get('total'));
+            const pagedItems = record.get('paged_items') || [];
+
+            const items = pagedItems.map(item => ({
+                ...formatProperties(item.properties.properties),
+                user_email: item.user_email,
+                user_id: item.user_id,
+                service_type: item.service_type,
+                total_amount: toNumeric(item.total_amount)
             }));
+
+            return { total, items };
         } finally {
             await session.close();
         }

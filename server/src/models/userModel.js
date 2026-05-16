@@ -49,6 +49,10 @@ export const User = {
     find: async (filters = {}) => {
         const session = getSession();
         try {
+            const page = parseInt(filters.page, 10) || 1;
+            const limit = parseInt(filters.limit, 10) || 10;
+            const skip = (page - 1) * limit;
+
             let query = 'MATCH (u:User)';
             const params = {};
             const clauses = [];
@@ -99,10 +103,29 @@ export const User = {
             if (clauses.length > 0) {
                 query += ' WHERE ' + clauses.join(' AND ');
             }
-            query += ' RETURN u';
+
+            query += `
+                WITH u 
+                ORDER BY u.created_at DESC
+                WITH count(u) as total, collect(u) as all_users
+                RETURN total, all_users[$skip..$skip+$limit] as paged_users`;
+
+            params.skip = session.int ? session.int(skip) : skip;
+            params.limit = session.int ? session.int(limit) : limit;
 
             const result = await session.run(query, params);
-            return result.records.map(record => formatProperties(record.get('u').properties));
+
+            if (result.records.length === 0) {
+                return { total: 0, items: [] };
+            }
+
+            const record = result.records[0];
+            const total = Number(record.get('total'));
+            const pagedUsers = record.get('paged_users') || [];
+
+            const items = pagedUsers.map(node => formatProperties(node.properties));
+
+            return { total, items };
         } finally {
             await session.close();
         }
