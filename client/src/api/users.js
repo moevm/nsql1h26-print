@@ -22,6 +22,10 @@ export const usersApi = {
   //deactivate(userId, reason = '') {
   //  return axiosInstance.patch(`/users/${userId}/deactivate`, { reason }).then(res => res.data);
   //},
+  async getAllUsers(filters = {}) {
+    const response = await axiosInstance.get('/users/filter', { params: filters });
+    return response.data;
+  },
 
   getById(userId) {
     return axiosInstance.get(`/users/${userId}`).then(res => res.data);

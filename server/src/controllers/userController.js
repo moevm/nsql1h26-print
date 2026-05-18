@@ -80,3 +80,13 @@ export const updateUser = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getUsersByFilters = async (req, res) => {
+    try {
+        const users = await User.findByFilters(req.query);
+        res.json(users);
+    } catch (error) {
+        console.error('Error in getUsersByFilters:', error);
+        res.status(500).json({ error: error.message });
+    }
+};

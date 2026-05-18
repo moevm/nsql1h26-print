@@ -70,6 +70,14 @@ const routes = [
           requiresAdmin: true
         }
       },
+
+      {
+        path: '/admin/statistics',
+        name: 'admin-statistics',
+        component: () => import('@/pages/admin/Statistics.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true }
+      },
+      
       { 
         path: '/admin/users/:id',
         name: 'admin-user-detail',

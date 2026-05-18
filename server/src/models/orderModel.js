@@ -1,4 +1,5 @@
 import { getSession } from '../config/db.js';
+import neo4j from 'neo4j-driver';
 
 const toNumeric = (value) => {
     if (value && typeof value.toNumber === 'function') {
@@ -298,6 +299,97 @@ export const Order = {
                     }
                 ]
             };
+        } finally {
+            await session.close();
+        }
+    },
+
+    // Статистика: заказы по статусам
+    getOrdersByStatus: async () => {
+        const session = getSession();
+        try {
+            const result = await session.run(`
+                MATCH (o:Order)
+                RETURN o.status as status, count(o) as count
+                ORDER BY count DESC
+            `);
+            return result.records.map(r => ({
+                status: r.get('status'),
+                count: Number(r.get('count').toNumber ? r.get('count').toNumber() : r.get('count'))
+            }));
+        } finally { await session.close(); }
+    },
+
+    // Статистика: популярность услуг и доход
+    getServicesPopularity: async () => {
+        const session = getSession();
+        try {
+            const result = await session.run(`
+                MATCH (o:Order)-[:FOR_SERVICE]->(s:Service)
+                RETURN s.service_type as type, 
+                       count(o) as orders, 
+                       sum(
+                           o.base_price * o.quantity * 
+                           CASE 
+                               WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1 
+                               ELSE coalesce(o.file_pages, 1) 
+                           END
+                       ) as revenue
+                ORDER BY orders DESC
+            `);
+            return result.records.map(r => ({
+                type: r.get('type'),
+                orders: Number(r.get('orders').toNumber ? r.get('orders').toNumber() : r.get('orders')),
+                revenue: Number(r.get('revenue').toNumber ? r.get('revenue').toNumber() : r.get('revenue')).toFixed(2)
+            }));
+        } finally { await session.close(); }
+    },
+
+    // Статистика: топ-5 клиентов (только role='client')
+    getTopClients: async (limit = 5) => {
+        const session = getSession();
+        try {
+            const safeLimit = neo4j.int(parseInt(limit, 10) || 5);
+            
+            const result = await session.run(`
+                MATCH (u:User)-[:PLACED_ORDER]->(o:Order)-[:FOR_SERVICE]->(s:Service)
+                WHERE u.role = 'client' AND u.deactivated_at IS NULL
+                WITH u, 
+                     sum(
+                         o.base_price * o.quantity * 
+                         CASE 
+                             WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1 
+                             ELSE coalesce(o.file_pages, 1) 
+                         END
+                     ) as total_spent,
+                     count(o) as order_count
+                WHERE total_spent > 0
+                RETURN 
+                    u.user_id as user_id,
+                    trim(coalesce(u.first_name, '') + ' ' + coalesce(u.last_name, '')) as name,
+                    u.email as email,
+                    total_spent as total_spent,
+                    order_count as order_count
+                ORDER BY total_spent DESC
+                LIMIT $limit
+            `, { limit: safeLimit });
+            
+            return result.records.map(r => {
+                const spent = r.get('total_spent');
+                const count = r.get('order_count');
+                const name = r.get('name');
+                
+                return {
+                    user_id: r.get('user_id'),
+                    name: name && name.trim() ? name : 'Без имени',
+                    email: r.get('email') || '',
+                    total_spent: spent != null ? Number(spent.toNumber ? spent.toNumber() : spent).toFixed(2) : '0.00',
+                    order_count: count != null ? Number(count.toNumber ? count.toNumber() : count) : 0
+                };
+            });
+        } catch (error) {
+            console.error('Ошибка в Order.getTopClients:', error.message);
+            throw error;
         } finally {
             await session.close();
         }

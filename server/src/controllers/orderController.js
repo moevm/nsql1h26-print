@@ -92,3 +92,26 @@ export const updateOrder = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+// Статистика для админа
+export const getOrdersStats = async (req, res) => {
+    try {
+        const [byStatus, popularity] = await Promise.all([
+            Order.getOrdersByStatus(),
+            Order.getServicesPopularity()
+        ]);
+        res.json({ byStatus, popularity });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const getTopClientsStats = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 5;
+        const clients = await Order.getTopClients(limit);
+        res.json({ clients });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
