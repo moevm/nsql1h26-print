@@ -126,6 +126,9 @@ export const updateOrder = async (req, res) => {
     try {
         const employeeId = req.user.user_id;
         const userRole = req.user.role;
+        if (req.user.role !== 'admin' && req.user.role !== 'employee') {
+            return res.status(403).json({message:'Нет доступа' });
+        }
         const updatedOrder = await Order.update(
             req.params.id,
             req.body,

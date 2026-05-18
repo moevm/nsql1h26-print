@@ -34,16 +34,34 @@ const ordersSeed = [
 ];
 
 const statusHistorySeed = [
-    { history_seed_key: 'h1', order_seed_key: 'o1', new_status: 'pending', notes: 'initial status', employee_email: 'emp1@print.local' },
-    { history_seed_key: 'h2', order_seed_key: 'o2', new_status: 'pending', notes: 'initial status', employee_email: 'emp1@print.local' },
+    // Заказ o1
+    { history_seed_key: 'h1', order_seed_key: 'o1', new_status: 'pending', notes: 'initial status', employee_email: 'client1@print.local' },
+
+    // Заказ o2
+    { history_seed_key: 'h2', order_seed_key: 'o2', new_status: 'pending', notes: 'initial status', employee_email: 'client1@print.local' },
     { history_seed_key: 'h3', order_seed_key: 'o2', new_status: 'processing', notes: 'in progress', employee_email: 'emp2@print.local' },
-    { history_seed_key: 'h4', order_seed_key: 'o3', new_status: 'pending', notes: 'initial status', employee_email: 'emp2@print.local' },
+
+    // Заказ o3
+    { history_seed_key: 'h4', order_seed_key: 'o3', new_status: 'pending', notes: 'initial status', employee_email: 'client2@print.local' },
     { history_seed_key: 'h5', order_seed_key: 'o3', new_status: 'ready', notes: 'completed', employee_email: 'emp1@print.local' },
-    { history_seed_key: 'h6', order_seed_key: 'o4', new_status: 'pending', notes: 'initial status', employee_email: 'emp2@print.local' },
+
+    // Заказ o4
+    { history_seed_key: 'h6', order_seed_key: 'o4', new_status: 'pending', notes: 'initial status', employee_email: 'client2@print.local' },
     { history_seed_key: 'h7', order_seed_key: 'o4', new_status: 'completed', notes: 'handed to client', employee_email: 'emp1@print.local' },
+
+    // Заказ o5
+    { history_seed_key: 'h_o5_init', order_seed_key: 'o5', new_status: 'pending', notes: 'initial status', employee_email: 'client3@print.local' },
+
+    // Заказ o6
+    { history_seed_key: 'h_o6_init', order_seed_key: 'o6', new_status: 'pending', notes: 'initial status', employee_email: 'client3@print.local' },
     { history_seed_key: 'h8', order_seed_key: 'o6', new_status: 'processing', notes: 'accepted to production', employee_email: 'emp2@print.local' },
+
+    // Заказ o7
+    { history_seed_key: 'h_o7_init', order_seed_key: 'o7', new_status: 'pending', notes: 'initial status', employee_email: 'client4@print.local' },
     { history_seed_key: 'h9', order_seed_key: 'o7', new_status: 'cancelled', notes: 'corrupted file', employee_email: 'emp1@print.local' },
-    { history_seed_key: 'h10', order_seed_key: 'o8', new_status: 'pending', notes: 'initial status', employee_email: 'emp2@print.local' }
+
+    // Заказ o8
+    { history_seed_key: 'h10', order_seed_key: 'o8', new_status: 'pending', notes: 'initial status', employee_email: 'client4@print.local' }
 ];
 
 const importExportLogsSeed = [
@@ -199,7 +217,7 @@ export const seedDatabase = async () => {
             );
         }
 
-        console.log('Сидирование завершено: 8 пользователей, 6 услуг, 8 заказов, 10 историй статусов, 10 логов импорта/экспорта');
+        console.log('Сидирование завершено: 8 пользователей, 6 услуг, 8 заказов, 13 историй статусов, 10 логов импорта/экспорта');
     } catch (e) {
         console.error('Ошибка сидирования:', e.message);
     } finally {
