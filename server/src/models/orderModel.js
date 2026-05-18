@@ -123,14 +123,14 @@ export const Order = {
 
             if (filters.service_type) {
                 clauses.push(`
-                    toLower(s.service_type) CONTAINS toLower($service_type)
+                    (toLower(s.service_type) CONTAINS toLower($service_type)
                     OR
                     CASE s.service_type
                         WHEN 'print' THEN 'печать'
                         WHEN 'scan' THEN 'сканирование'
                         WHEN 'risography' THEN 'ризография'
                         ELSE ''
-                    END CONTAINS toLower($service_type)
+                    END CONTAINS toLower($service_type))
                 `);
                 params.service_type = filters.service_type;
             }
@@ -225,7 +225,8 @@ export const Order = {
         const session = getSession();
         try {
             const result = await session.run(
-                `MATCH (u:User)-[:PLACED_ORDER]->(o:Order {order_id: $orderId})-[:FOR_SERVICE]->(s:Service)
+                `MATCH (u:User)-[:PLACED_ORDER]->(o:Order)-[:FOR_SERVICE]->(s:Service)
+            WHERE toLower(o.order_id) = toLower($orderId)
             OPTIONAL MATCH (o)-[:HAS_STATUS_HISTORY]->(h:StatusHistory)
             OPTIONAL MATCH (h)-[:CHANGED_BY]->(actor:User)
             WITH o, u, s, h, actor
@@ -256,6 +257,9 @@ export const Order = {
                 END AS total_amount`,
                 { orderId }
             );
+
+            if (result.records.length === 0) return null;
+
             const record = result.records[0];
             const history = (record.get('status_history') || [])
                 .filter(Boolean);
@@ -288,7 +292,7 @@ export const Order = {
                 throw new Error('FORBIDDEN_STATUS_CHANGE');
             }
             const result = await session.run(
-                `MATCH (o:Order {order_id: $orderId})
+                `MATCH (o:Order) WHERE toLower(o.order_id) = toLower($orderId)
             MATCH (u:User {user_id: $userId})
             WITH o, u
             SET o.status = $status
