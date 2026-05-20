@@ -58,16 +58,16 @@ export const User = {
             const clauses = [];
 
             if (filters.first_name) {
-                clauses.push('u.first_name CONTAINS $first_name');
+                clauses.push('toLower(u.first_name) CONTAINS toLower($first_name)');
                 params.first_name = filters.first_name;
             }
             if (filters.role) {
-                clauses.push('u.role = $role');
+                clauses.push('toLower(u.role) = toLower($role)');
                 params.role = filters.role;
             }
 
             if (filters.last_name) {
-                clauses.push('u.last_name CONTAINS $last_name');
+                clauses.push('toLower(u.last_name) CONTAINS toLower($last_name)');
                 params.last_name = filters.last_name;
             }
 
@@ -80,15 +80,15 @@ export const User = {
             }
 
             if (filters.email) {
-                clauses.push('u.email CONTAINS $email');
+                clauses.push('toLower(u.email) CONTAINS toLower($email)');
                 params.email = filters.email;
             }
             if (filters.phone) {
-                clauses.push('u.phone CONTAINS $phone');
+                clauses.push('toLower(u.phone) CONTAINS toLower($phone)');
                 params.phone = filters.phone;
             }
             if (filters.user_id) {
-                clauses.push('u.user_id CONTAINS $user_id');
+                clauses.push('toLower(u.user_id) CONTAINS toLower($user_id)');
                 params.user_id = filters.user_id;
             }
             if (filters.created_from) {
