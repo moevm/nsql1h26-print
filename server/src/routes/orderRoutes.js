@@ -2,7 +2,7 @@ import express from 'express';
 import * as orderController from '../controllers/orderController.js';
 import {validateCreateOrder, validateUpdateOrder} from '../middleware/orderValidator.js';
 import {uploadOrderFile} from '../middleware/uploadFileMiddleware.js';
-import {protect} from '../middleware/authMiddleware.js';
+import {protect, requireAdmin} from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 

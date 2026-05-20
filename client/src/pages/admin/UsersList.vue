@@ -4,7 +4,8 @@
       <template #header>
         <div class="users-header">
           <h1 class="users-title">Пользователи</h1>
-          <n-text depth="3">Всего: {{ filteredUsers.length }}</n-text>
+          <!-- Счетчик общего количества берем из totalUsers с бэкенда -->
+          <n-text depth="3">Всего нашли: {{ totalUsers }}</n-text>
         </div>
       </template>
 
@@ -35,13 +36,13 @@
         />
       </n-space>
 
-      <n-data-table 
-        :columns="columns" 
-        :data="visibleUsers" 
-        :loading="loading" 
-        striped 
-        bordered
-        :row-props="(row) => ({ 
+      <n-data-table
+          :columns="columns"
+          :data="users"
+          :loading="loading"
+          striped
+          bordered
+          :row-props="(row) => ({
           style: 'cursor: pointer;',
           onClick: () => router.push(`/admin/users/${row.user_id}`)
         })"
@@ -51,9 +52,19 @@
         </template>
       </n-data-table>
 
-      <n-space justify="center" class="load-more-section" v-if="showMore">
-        <n-button @click="loadMore" size="large">Показать ещё</n-button>
-      </n-space>
+      <template #footer>
+        <n-space justify="center" class="pagination-wrapper" v-if="totalUsers > 0">
+          <n-pagination
+              v-model:page="currentPage"
+              v-model:page-size="limitPerPage"
+              :item-count="totalUsers"
+              :page-sizes="[5, 10, 20, 50, 100]"
+              show-size-picker
+              @update:page="handlePageChange"
+              @update:page-size="handlePageSizeChange"
+          />
+        </n-space>
+      </template>
     </n-card>
 
     <!-- Смена роли -->
@@ -62,7 +73,7 @@
         <n-space vertical>
           <n-text>Изменить роль пользователя <n-text strong>{{ targetUser?.last_name }} {{ targetUser?.first_name }}</n-text>?</n-text>
           <n-text depth="3">
-            Текущая: <n-tag size="small" type="info">{{ roleLabels[targetUser?.role] }}</n-tag> → 
+            Текущая: <n-tag size="small" type="info">{{ roleLabels[targetUser?.role] }}</n-tag>
             Новая: <n-tag size="small" type="warning">{{ roleLabels[pendingRole] }}</n-tag>
           </n-text>
         </n-space>
@@ -104,13 +115,20 @@
 import { ref, computed, onMounted, watch, h } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/userStore';
-import { NCard, NText, NSpace, NInput, NSelect, NDataTable, NDatePicker, NEmpty, NTag, NModal, NButton } from 'naive-ui';
+import {
+  NCard, NText, NSpace, NInput, NSelect, NDataTable,
+  NDatePicker, NEmpty, NTag, NModal, NButton, NPagination
+} from 'naive-ui';
 import { usersApi } from '@/api/users';
 
 const userStore = useUserStore();
 const router = useRouter(); 
 const users = ref([]);
 const loading = ref(false);
+
+const currentPage = ref(1);
+const limitPerPage = ref(10);
+const totalUsers = ref(0);
 
 const filters = ref({
   firstName: null,
@@ -124,20 +142,12 @@ const filters = ref({
   createdTo: null
 });
 
-// Пагинация
-const visibleCount = ref(10);
-
 const showRoleModal = ref(false);
 const showStatusModal = ref(false);
 const targetUser = ref(null);
 const pendingRole = ref('');
 const pendingAction = ref('');
 
-const roleOptions = [
-  { label: 'Админ', value: 'admin' },
-  { label: 'Сотрудник', value: 'employee' },
-  { label: 'Клиент', value: 'client' }
-];
 const roleLabels = { admin: 'Админ', employee: 'Сотрудник', client: 'Клиент' };
 
 const isCurrentUser = (userId) => {
@@ -194,21 +204,6 @@ const columns = [
   }
 ];
 
-// Обработчики модалок
-const handleRoleSelect = (user, newRole) => {
-  if (isCurrentUser(user.user_id)) return;
-  targetUser.value = user;
-  pendingRole.value = newRole;
-  showRoleModal.value = true;
-};
-
-const handleStatusToggle = (user) => {
-  if (isCurrentUser(user.user_id)) return;
-  targetUser.value = user;
-  pendingAction.value = user.deactivated_at ? 'activate' : 'deactivate';
-  showStatusModal.value = true;
-};
-
 const executeRoleChange = async () => {
   showRoleModal.value = false;
   const user = targetUser.value;
@@ -236,11 +231,14 @@ const executeStatusChange = async () => {
   }
 };
 
-// Загрузка с серверными фильтрами
 const loadUsers = async () => {
   loading.value = true;
   try {
-    const params = {};
+    const params = {
+      page: currentPage.value,
+      limit: limitPerPage.value
+    };
+
     if (filters.value.firstName) params.first_name = filters.value.firstName;
     if (filters.value.lastName) params.last_name = filters.value.lastName;
     if (filters.value.email) params.email = filters.value.email;
@@ -255,39 +253,43 @@ const loadUsers = async () => {
       if (from) params.created_from = new Date(from).toISOString();
       if (to) params.created_to = new Date(to).toISOString();
     }
-    const data = await usersApi.getAll(params);
-    users.value = Array.isArray(data) ? data : (data.users || []);
+
+    const responseData = await usersApi.getAll(params);
+
+    users.value = responseData?.items || [];
+    totalUsers.value = responseData?.total || 0;
   } catch (err) {
     console.error('Failed to load users:', err);
+    users.value = [];
+    totalUsers.value = 0;
   } finally {
     loading.value = false;
   }
 };
 
-const viewUserDetail = (userId) => {
-  router.push(`/admin/users/${userId}`);
+const handlePageChange = (page) => {
+  currentPage.value = page;
+  loadUsers();
 };
 
-const filteredUsers = computed(() => users.value);
+const handlePageSizeChange = (pageSize) => {
+  limitPerPage.value = pageSize;
+  currentPage.value = 1;
+  loadUsers();
+};
 
-const visibleUsers = computed(() => filteredUsers.value.slice(0, visibleCount.value));
-const showMore = computed(() => visibleCount.value < filteredUsers.value.length);
-
-// При изменении любого фильтра перезапрашиваем и сбрасываем пагинацию
 watch(
-  () => [
-    filters.value.firstName, filters.value.lastName, filters.value.email,
-    filters.value.phone, filters.value.userId, filters.value.role,
-    filters.value.status, filters.value.createdRange
-  ],
-  () => {
-    visibleCount.value = 10;
-    loadUsers();
-  },
-  { deep: true }
+    () => [
+      filters.value.firstName, filters.value.lastName, filters.value.email,
+      filters.value.phone, filters.value.userId, filters.value.role,
+      filters.value.status, filters.value.createdRange
+    ],
+    () => {
+      currentPage.value = 1;
+      loadUsers();
+    },
+    { deep: true }
 );
-
-const loadMore = () => { visibleCount.value += 10; };
 
 const formatDate = (iso) => {
   if (!iso) return '—';
@@ -335,11 +337,7 @@ onMounted(loadUsers);
   margin-bottom: 1rem; 
 }
 
-.empty-state { 
-  padding: 2rem 0; 
-}
-
-.load-more-section {
-  padding: 1.5rem 0 0.5rem;
+.pagination-wrapper {
+  padding-top: 1rem;
 }
 </style>

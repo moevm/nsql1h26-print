@@ -20,8 +20,26 @@ export const ordersApi = {
   },
 
   getUserOrders: async (userId, filters = {}) => {
+    const apiParams = {
+      page: filters.page || 1,
+      limit: filters.limit || 5,
+      status: filters.status,
+      service_type: filters.service_type,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+      color_mode: filters.color_mode,
+      format: filters.format,
+      order_id: filters.orderId
+    };
+
+    Object.keys(apiParams).forEach(key => {
+      if (apiParams[key] === undefined || apiParams[key] === null || apiParams[key] === '') {
+        delete apiParams[key];
+      }
+    });
+
     const response = await axiosInstance.get(`/orders/user/${userId}`, {
-      params: filters
+      params: apiParams
     });
     return response.data;
   },
@@ -46,7 +64,7 @@ export const ordersApi = {
 
   getFile: async (orderId) => {
     const response = await axiosInstance.get(`/orders/${orderId}/file`, {
-      responseType: 'blob'  
+      responseType: 'blob'
     });
     return response;
   }

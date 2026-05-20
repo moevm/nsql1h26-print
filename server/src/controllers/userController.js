@@ -19,6 +19,7 @@ export const register = async (req, res) => {
         const newUser = await User.create({
             email,
             ...userData,
+            role: 'client',
             password_hash
         });
         const { password_hash: _, ...safeUser } = newUser;
@@ -58,11 +59,28 @@ export const getUsers = async (req, res) => {
 };
 
 export const getUserById = async (req, res) => {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: 'Пользователь не найден' });
-
-    const { password_hash: _, ...safeData } = user;
-    res.json(safeData);
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({
+                message: 'Пользователь не найден'
+            });
+        }
+        if (
+            req.user.role !== 'admin' &&
+            String(req.user.user_id) !== String(req.params.id)
+        ) {
+            return res.status(403).json({
+                message: 'Доступ запрещён'
+            });
+        }
+        const { password_hash: _, ...safeData } = user;
+        res.json(safeData);
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
 };
 
 export const updateUser = async (req, res) => {
