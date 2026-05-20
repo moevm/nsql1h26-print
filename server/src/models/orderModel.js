@@ -451,7 +451,6 @@ export const Order = {
             const queryParams = {};
             
             if (isByService) {
-                // Запрос без фильтра по serviceType (фильтруем потом в JS)
                 query = `
                     MATCH (s:Service)
                     OPTIONAL MATCH (o:Order)-[:FOR_SERVICE]->(s)
@@ -474,7 +473,6 @@ export const Order = {
                 if (dateTo) { orderFilters.push('o.created_at <= datetime($dateTo)'); queryParams.dateTo = dateTo; }
                 if (orderFilters.length) query += ' AND ' + orderFilters.join(' AND ');
                 
-                // Группировка и вычисление label
                 query += `
                     WITH 
                         CASE 
@@ -506,14 +504,12 @@ export const Order = {
                     revenue: Number(r.get('revenue').toNumber ? r.get('revenue').toNumber() : r.get('revenue')).toFixed(2)
                 }));
                 
-                // Фильтр по типу услуги (на JS)
                 if (serviceType) {
                     const map = { 'print': 'Печать', 'scan': 'Скан', 'risography': 'Ризография' };
                     const prefix = map[serviceType];
                     if (prefix) data = data.filter(item => item.label.startsWith(prefix));
                 }
                 
-                // Фильтры по revenue и order_count
                 if (minRevenue !== undefined && minRevenue !== null) data = data.filter(item => parseFloat(item.revenue) >= minRevenue);
                 if (maxRevenue !== undefined && maxRevenue !== null) data = data.filter(item => parseFloat(item.revenue) <= maxRevenue);
                 if (minOrders !== undefined && minOrders !== null) data = data.filter(item => item.order_count >= minOrders);
@@ -522,9 +518,6 @@ export const Order = {
                 return data;
                 
             } else {
-                // Группировка по сотрудникам (оставляем как было, но можно тоже добавить фильтрацию по serviceType для заказов)
-                // Здесь нужно учесть, что filter по serviceType должен применяться к заказам, влияя на показатели сотрудников.
-                // Добавим условие в OPTIONAL MATCH.
                 query = `
                     MATCH (emp:User)
                     WHERE emp.role IN ['admin', 'employee']
@@ -543,7 +536,6 @@ export const Order = {
                     OPTIONAL MATCH (h)<-[:HAS_STATUS_HISTORY]-(o:Order)-[:FOR_SERVICE]->(s:Service)
                     WHERE o.status IN ['ready', 'completed']
                 `;
-                // Добавляем фильтр по типу услуги в заказы
                 if (serviceType) {
                     query += ' AND s.service_type = $serviceType';
                     queryParams.serviceType = serviceType;
@@ -574,7 +566,6 @@ export const Order = {
                     revenue: Number(r.get('revenue').toNumber ? r.get('revenue').toNumber() : r.get('revenue')).toFixed(2)
                 }));
                 
-                // Фильтры revenue и order_count на JS
                 if (minRevenue !== undefined && minRevenue !== null) data = data.filter(item => parseFloat(item.revenue) >= minRevenue);
                 if (maxRevenue !== undefined && maxRevenue !== null) data = data.filter(item => parseFloat(item.revenue) <= maxRevenue);
                 if (minOrders !== undefined && minOrders !== null) data = data.filter(item => item.order_count >= minOrders);

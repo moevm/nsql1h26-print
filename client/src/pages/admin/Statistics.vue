@@ -6,29 +6,29 @@
       </template>
 
       <!-- ФИЛЬТРЫ ПОЛЬЗОВАТЕЛЕЙ -->
-<n-form :model="filters" label-placement="left" label-width="125" class="filters-form">
-  <n-grid :cols="3" :x-gap="24">
-    <n-gi>
-      <n-form-item label="Роль">
-        <n-select v-model:value="filters.role" :options="roleOptions" clearable placeholder="Все" />
-      </n-form-item>
-    </n-gi>
-    <n-gi>
-      <n-form-item label="Статус">
-        <n-select v-model:value="filters.active" :options="statusOptions" clearable placeholder="Все" />
-      </n-form-item>
-    </n-gi>
-    <n-gi>
-      <n-form-item label="Тип услуги">
-        <n-select v-model:value="filters.serviceType" :options="serviceTypeOptions" clearable placeholder="Все" />
-      </n-form-item>
-    </n-gi>
-  </n-grid>
-  <n-space justify="end" style="margin-top: 16px">
-    <n-button secondary @click="resetFilters">Сбросить</n-button>
-    <n-button type="primary" @click="loadStats">Показать статистику</n-button>
-  </n-space>
-</n-form>
+      <n-form :model="filters" label-placement="left" label-width="125" class="filters-form">
+        <n-grid :cols="3" :x-gap="24">
+          <n-gi>
+            <n-form-item label="Роль">
+              <n-select v-model:value="filters.role" :options="roleOptions" clearable placeholder="Все" />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
+            <n-form-item label="Статус">
+              <n-select v-model:value="filters.active" :options="statusOptions" clearable placeholder="Все" />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
+            <n-form-item label="Тип услуги">
+              <n-select v-model:value="filters.serviceType" :options="serviceTypeOptions" clearable placeholder="Все" />
+            </n-form-item>
+          </n-gi>
+        </n-grid>
+        <n-space justify="end" style="margin-top: 16px">
+          <n-button secondary @click="resetFilters">Сбросить</n-button>
+          <n-button type="primary" @click="loadStats">Показать статистику</n-button>
+        </n-space>
+      </n-form>
 
       <n-divider>Настройки графика эффективности</n-divider>
       <n-space align="center" wrap>
@@ -163,28 +163,27 @@ import { ordersApi } from '@/api/orders';
 const message = useMessage();
 const userStore = useUserStore();
 
-// --- ТОЛЬКО ДВА ФИЛЬТРА ---
 const filters = ref({
-  role: null,       // 'admin' или 'employee'
-  active: null,      // true (активен) / false (деактивирован)
+  role: null,
+  active: null,
   serviceType: null
 });
 
-// Данные таблицы пользователей (для отображения списка)
+// Данные таблицы пользователей
 const rawData = ref([]);
 const tableData = ref([]);
 const totalUsers = ref(0);
 const loading = ref(false);
 
-// Нижняя статистика (заказы, топ-клиенты) – остаётся без изменений
+// Нижняя статистика (заказы, топ-клиенты)
 const statsLoading = ref(false);
 const ordersStats = ref({ byStatus: [], popularity: [] });
 const topClients = ref([]);
 
-// --- График эффективности ---
+// График
 const chartLoading = ref(false);
-const chartGroupBy = ref('employee');   // 'employee' или 'service'
-const chartMetric = ref('revenue');     // 'revenue' или 'count'
+const chartGroupBy = ref('employee');
+const chartMetric = ref('revenue');
 const chartData = ref([]);
 const totalChartMetric = ref(0);
 
@@ -213,7 +212,6 @@ const statusOptions = [
   { label: 'Деактивирован', value: false }
 ];
 
-// --- Загрузка таблицы пользователей (с фильтрами роль/статус) ---
 const loadStats = async () => {
   loading.value = true;
   try {
@@ -235,7 +233,6 @@ const loadStats = async () => {
       sum: formatCurrency(u.total_created_sum || u.total_processed_sum || 0)
     }));
         
-    // После загрузки пользователей обновляем график (с теми же фильтрами)
     await loadChartStats();
   } catch (err) {
     console.error('Ошибка загрузки пользователей:', err);
@@ -245,7 +242,7 @@ const loadStats = async () => {
   }
 };
 
-// --- Загрузка нижней статистики (заказы, топ-клиенты) ---
+// Загрузка нижней статистики
 const loadAllStats = async () => {
   statsLoading.value = true;
   try {
@@ -262,7 +259,7 @@ const loadAllStats = async () => {
   }
 };
 
-// --- Загрузка графика эффективности (с фильтрами роль/статус) ---
+// Загрузка графика
 const loadChartStats = async () => {
   chartLoading.value = true;
   try {
@@ -313,18 +310,17 @@ const loadChartStats = async () => {
   }
 };
 
-// --- Сброс фильтров ---
+// Сброс фильтров
 const resetFilters = () => {
   filters.value = {
     role: null,
     active: null,
     serviceType: null
   };
-  loadChartStats();   // обновить график
-  loadStats();        // обновить таблицу
+  loadChartStats();
+  loadStats();
 };
 
-// --- Вспомогательные функции ---
 const formatCurrency = (num) => {
   return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(num);
 };
@@ -347,7 +343,6 @@ onMounted(() => {
   if (userStore.user?.role === 'admin') {
     loadStats();
     loadAllStats();
-    // loadChartStats вызовется внутри loadStats, но на всякий случай:
     loadChartStats();
   }
 });
