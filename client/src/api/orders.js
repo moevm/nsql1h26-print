@@ -67,5 +67,17 @@ export const ordersApi = {
       responseType: 'blob'
     });
     return response;
-  }
+  },
+
+  getStats() {
+    return axiosInstance.get('/orders/stats').then(res => res.data);
+  },
+  
+  getTopClients(limit = 5) {
+    return axiosInstance.get('/orders/stats/top-clients', { params: { limit } }).then(res => res.data);
+  },
+  
+  getEmployeeStats(params = {}) {
+    return axiosInstance.get('/orders/stats/employees', { params }).then(res => res.data);
+  },
 };

@@ -1,4 +1,5 @@
 import { getSession } from '../config/db.js';
+import neo4j from 'neo4j-driver';
 
 const toNumeric = (value) => {
     if (value && typeof value.toNumber === 'function') {
@@ -326,5 +327,277 @@ export const Order = {
         } finally {
             await session.close();
         }
+    },
+
+    // Статистика: заказы по статусам
+    getOrdersByStatus: async () => {
+        const session = getSession();
+        try {
+            const result = await session.run(`
+                MATCH (o:Order)
+                RETURN o.status as status, count(o) as count
+                ORDER BY count DESC
+            `);
+            return result.records.map(r => ({
+                status: r.get('status'),
+                count: Number(r.get('count').toNumber ? r.get('count').toNumber() : r.get('count'))
+            }));
+        } finally { await session.close(); }
+    },
+
+    // Статистика: популярность услуг и доход
+    getServicesPopularity: async () => {
+        const session = getSession();
+        try {
+            const result = await session.run(`
+                MATCH (o:Order)-[:FOR_SERVICE]->(s:Service)
+                RETURN s.service_type as type, 
+                       count(o) as orders, 
+                       sum(
+                           o.base_price * o.quantity * 
+                           CASE 
+                               WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1 
+                               ELSE coalesce(o.file_pages, 1) 
+                           END
+                       ) as revenue
+                ORDER BY orders DESC
+            `);
+            return result.records.map(r => ({
+                type: r.get('type'),
+                orders: Number(r.get('orders').toNumber ? r.get('orders').toNumber() : r.get('orders')),
+                revenue: Number(r.get('revenue').toNumber ? r.get('revenue').toNumber() : r.get('revenue')).toFixed(2)
+            }));
+        } finally { await session.close(); }
+    },
+
+    // Статистика: топ-5 клиентов (только role='client')
+    getTopClients: async (limit = 5) => {
+        const session = getSession();
+        try {
+            const safeLimit = neo4j.int(parseInt(limit, 10) || 5);
+            
+            const result = await session.run(`
+                MATCH (u:User)-[:PLACED_ORDER]->(o:Order)-[:FOR_SERVICE]->(s:Service)
+                WHERE u.role = 'client' AND u.deactivated_at IS NULL
+                WITH u, 
+                     sum(
+                         o.base_price * o.quantity * 
+                         CASE 
+                             WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1 
+                             ELSE coalesce(o.file_pages, 1) 
+                         END
+                     ) as total_spent,
+                     count(o) as order_count
+                WHERE total_spent > 0
+                RETURN 
+                    u.user_id as user_id,
+                    trim(coalesce(u.first_name, '') + ' ' + coalesce(u.last_name, '')) as name,
+                    u.email as email,
+                    total_spent as total_spent,
+                    order_count as order_count
+                ORDER BY total_spent DESC
+                LIMIT $limit
+            `, { limit: safeLimit });
+            
+            return result.records.map(r => {
+                const spent = r.get('total_spent');
+                const count = r.get('order_count');
+                const name = r.get('name');
+                
+                return {
+                    user_id: r.get('user_id'),
+                    name: name && name.trim() ? name : 'Без имени',
+                    email: r.get('email') || '',
+                    total_spent: spent != null ? Number(spent.toNumber ? spent.toNumber() : spent).toFixed(2) : '0.00',
+                    order_count: count != null ? Number(count.toNumber ? count.toNumber() : count) : 0
+                };
+            });
+        } catch (error) {
+            console.error('Ошибка в Order.getTopClients:', error.message);
+            throw error;
+        } finally {
+            await session.close();
+        }
+    },
+
+    // Статистика: Эффективность сотрудников
+    getEmployeePerformance: async (params = {}) => {
+        const session = getSession();
+        try {
+            const {
+                groupBy = 'employee',
+                role,
+                deactivated,
+                dateFrom,
+                dateTo,
+                minRevenue,
+                maxRevenue,
+                minOrders,
+                maxOrders,
+                name,
+                email,
+                registeredFrom,
+                registeredTo,
+                serviceType
+            } = params;
+            
+            let deactivatedBool;
+            if (deactivated !== undefined) {
+                deactivatedBool = (deactivated === 'true' || deactivated === true);
+            }
+            
+            const isByService = groupBy === 'service';
+            let query = '';
+            const queryParams = {};
+            
+            if (isByService) {
+                // Запрос без фильтра по serviceType (фильтруем потом в JS)
+                query = `
+                    MATCH (s:Service)
+                    OPTIONAL MATCH (o:Order)-[:FOR_SERVICE]->(s)
+                    OPTIONAL MATCH (h:StatusHistory {new_status: 'ready'})-[:CHANGED_BY]->(emp:User)
+                    WHERE emp.role IN ['admin', 'employee']
+                    AND (h)<-[:HAS_STATUS_HISTORY]-(o)
+                `;
+                
+                const empFilters = [];
+                if (role) { empFilters.push('emp.role = $role'); queryParams.role = role; }
+                if (deactivatedBool !== undefined) { empFilters.push(deactivatedBool ? 'emp.deactivated_at IS NOT NULL' : 'emp.deactivated_at IS NULL'); }
+                if (name) { empFilters.push('toLower(coalesce(emp.first_name, "") + " " + coalesce(emp.last_name, "")) CONTAINS toLower($name)'); queryParams.name = name; }
+                if (email) { empFilters.push('toLower(emp.email) CONTAINS toLower($email)'); queryParams.email = email; }
+                if (registeredFrom) { empFilters.push('emp.created_at >= datetime($registeredFrom)'); queryParams.registeredFrom = registeredFrom; }
+                if (registeredTo) { empFilters.push('emp.created_at <= datetime($registeredTo)'); queryParams.registeredTo = registeredTo; }
+                if (empFilters.length) query += ' AND ' + empFilters.join(' AND ');
+                
+                const orderFilters = [];
+                if (dateFrom) { orderFilters.push('o.created_at >= datetime($dateFrom)'); queryParams.dateFrom = dateFrom; }
+                if (dateTo) { orderFilters.push('o.created_at <= datetime($dateTo)'); queryParams.dateTo = dateTo; }
+                if (orderFilters.length) query += ' AND ' + orderFilters.join(' AND ');
+                
+                // Группировка и вычисление label
+                query += `
+                    WITH 
+                        CASE 
+                            WHEN s.service_type = 'print' THEN 
+                                'Печать (' + (CASE WHEN o.parameters CONTAINS '"color_mode":"color"' THEN 'цвет' ELSE 'ЧБ' END) + ')'
+                            WHEN s.service_type = 'scan' THEN 
+                                'Скан (' + (CASE WHEN o.parameters CONTAINS '"color_mode":"color"' THEN 'цвет' ELSE 'ЧБ' END) + ')'
+                            WHEN s.service_type = 'risography' THEN 
+                                'Ризография (' + toString(o.quantity) + ' экз.)'
+                            ELSE s.service_type
+                        END as label,
+                        o,
+                        s
+                    RETURN 
+                        label,
+                        count(DISTINCT CASE WHEN o.status IN ['ready', 'completed'] THEN o END) as order_count,
+                        sum(CASE WHEN o.status IN ['ready', 'completed'] 
+                                THEN o.base_price * o.quantity * 
+                                    CASE WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1 
+                                        ELSE coalesce(o.file_pages, 1) END
+                                ELSE 0 END) as revenue
+                    ORDER BY revenue DESC
+                `;
+                
+                const result = await session.run(query, queryParams);
+                let data = result.records.map(r => ({
+                    label: r.get('label'),
+                    order_count: Number(r.get('order_count').toNumber ? r.get('order_count').toNumber() : r.get('order_count')),
+                    revenue: Number(r.get('revenue').toNumber ? r.get('revenue').toNumber() : r.get('revenue')).toFixed(2)
+                }));
+                
+                // Фильтр по типу услуги (на JS)
+                if (serviceType) {
+                    const map = { 'print': 'Печать', 'scan': 'Скан', 'risography': 'Ризография' };
+                    const prefix = map[serviceType];
+                    if (prefix) data = data.filter(item => item.label.startsWith(prefix));
+                }
+                
+                // Фильтры по revenue и order_count
+                if (minRevenue !== undefined && minRevenue !== null) data = data.filter(item => parseFloat(item.revenue) >= minRevenue);
+                if (maxRevenue !== undefined && maxRevenue !== null) data = data.filter(item => parseFloat(item.revenue) <= maxRevenue);
+                if (minOrders !== undefined && minOrders !== null) data = data.filter(item => item.order_count >= minOrders);
+                if (maxOrders !== undefined && maxOrders !== null) data = data.filter(item => item.order_count <= maxOrders);
+                
+                return data;
+                
+            } else {
+                // Группировка по сотрудникам (оставляем как было, но можно тоже добавить фильтрацию по serviceType для заказов)
+                // Здесь нужно учесть, что filter по serviceType должен применяться к заказам, влияя на показатели сотрудников.
+                // Добавим условие в OPTIONAL MATCH.
+                query = `
+                    MATCH (emp:User)
+                    WHERE emp.role IN ['admin', 'employee']
+                `;
+                const empFilters = [];
+                if (role) { empFilters.push('emp.role = $role'); queryParams.role = role; }
+                if (deactivatedBool !== undefined) { empFilters.push(deactivatedBool ? 'emp.deactivated_at IS NOT NULL' : 'emp.deactivated_at IS NULL'); }
+                if (name) { empFilters.push('toLower(coalesce(emp.first_name, "") + " " + coalesce(emp.last_name, "")) CONTAINS toLower($name)'); queryParams.name = name; }
+                if (email) { empFilters.push('toLower(emp.email) CONTAINS toLower($email)'); queryParams.email = email; }
+                if (registeredFrom) { empFilters.push('emp.created_at >= datetime($registeredFrom)'); queryParams.registeredFrom = registeredFrom; }
+                if (registeredTo) { empFilters.push('emp.created_at <= datetime($registeredTo)'); queryParams.registeredTo = registeredTo; }
+                if (empFilters.length) query += ' AND ' + empFilters.join(' AND ');
+                
+                query += `
+                    OPTIONAL MATCH (h:StatusHistory {new_status: 'ready'})-[:CHANGED_BY]->(emp)
+                    OPTIONAL MATCH (h)<-[:HAS_STATUS_HISTORY]-(o:Order)-[:FOR_SERVICE]->(s:Service)
+                    WHERE o.status IN ['ready', 'completed']
+                `;
+                // Добавляем фильтр по типу услуги в заказы
+                if (serviceType) {
+                    query += ' AND s.service_type = $serviceType';
+                    queryParams.serviceType = serviceType;
+                }
+                const orderFilters = [];
+                if (dateFrom) { orderFilters.push('o.created_at >= datetime($dateFrom)'); queryParams.dateFrom = dateFrom; }
+                if (dateTo) { orderFilters.push('o.created_at <= datetime($dateTo)'); queryParams.dateTo = dateTo; }
+                if (orderFilters.length) query += ' AND ' + orderFilters.join(' AND ');
+                
+                query += `
+                    WITH emp,
+                        count(DISTINCT CASE WHEN o.status IN ['ready', 'completed'] THEN o END) as order_count,
+                        sum(CASE WHEN o.status IN ['ready', 'completed'] 
+                                THEN o.base_price * o.quantity * 
+                                    CASE WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1 
+                                        ELSE coalesce(o.file_pages, 1) END
+                                ELSE 0 END) as revenue
+                    WITH emp.first_name + ' ' + emp.last_name as label,
+                        coalesce(order_count, 0) as order_count,
+                        coalesce(revenue, 0) as revenue
+                    RETURN label, order_count, revenue
+                    ORDER BY revenue DESC
+                `;
+                const result = await session.run(query, queryParams);
+                let data = result.records.map(r => ({
+                    label: r.get('label'),
+                    order_count: Number(r.get('order_count').toNumber ? r.get('order_count').toNumber() : r.get('order_count')),
+                    revenue: Number(r.get('revenue').toNumber ? r.get('revenue').toNumber() : r.get('revenue')).toFixed(2)
+                }));
+                
+                // Фильтры revenue и order_count на JS
+                if (minRevenue !== undefined && minRevenue !== null) data = data.filter(item => parseFloat(item.revenue) >= minRevenue);
+                if (maxRevenue !== undefined && maxRevenue !== null) data = data.filter(item => parseFloat(item.revenue) <= maxRevenue);
+                if (minOrders !== undefined && minOrders !== null) data = data.filter(item => item.order_count >= minOrders);
+                if (maxOrders !== undefined && maxOrders !== null) data = data.filter(item => item.order_count <= maxOrders);
+                
+                return data;
+            }
+        } finally { await session.close(); }
+    },
+
+    // Статистика: Распределение по услугам
+    getServiceDistribution: async () => {
+        const session = getSession();
+        try {
+            const result = await session.run(`
+                MATCH (o:Order)-[:FOR_SERVICE]->(s:Service)
+                RETURN s.service_type as type, count(o) as count
+                ORDER BY count DESC
+            `);
+            return result.records.map(r => ({
+                type: r.get('type'),
+                count: Number(r.get('count').toNumber ? r.get('count').toNumber() : r.get('count'))
+            }));
+        } finally { await session.close(); }
     }
 };

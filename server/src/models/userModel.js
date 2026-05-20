@@ -147,6 +147,111 @@ export const User = {
         }
     },
 
+        findByFilters: async (filters = {}) => {
+        const session = getSession();
+        try {
+            const params = {};
+            
+            let query = 'MATCH (u:User)';
+            const userClauses = [];
+
+            if (filters.role) { userClauses.push('u.role = $role'); params.role = filters.role; }
+            let deactivatedBool;
+            if (filters.deactivated !== undefined) {
+                deactivatedBool = (filters.deactivated === 'true' || filters.deactivated === true);
+            }
+            if (deactivatedBool !== undefined) {
+                userClauses.push(deactivatedBool ? 'u.deactivated_at IS NOT NULL' : 'u.deactivated_at IS NULL');
+            }
+            if (filters.name) {
+                userClauses.push('toLower(coalesce(u.first_name, "") + " " + coalesce(u.last_name, "")) CONTAINS toLower($name)');
+                params.name = filters.name;
+            }
+            if (filters.email) {
+                userClauses.push('toLower(u.email) CONTAINS toLower($email)');
+                params.email = filters.email;
+            }
+            if (filters.from) { userClauses.push('u.created_at >= datetime($from)'); params.from = filters.from; }
+            if (filters.to) { userClauses.push('u.created_at <= datetime($to)'); params.to = filters.to; }
+
+            if (userClauses.length > 0) query += ' WHERE ' + userClauses.join(' AND ');
+
+            query += `
+                OPTIONAL MATCH (u)-[:PLACED_ORDER]->(o:Order)-[:FOR_SERVICE]->(s:Service)
+                WITH u,
+                     count(o) as order_count,
+                     sum(
+                         o.base_price * o.quantity * 
+                         CASE WHEN s.service_type = 'scan' AND coalesce(o.file_pages, 0) = 0 THEN 1 
+                              ELSE coalesce(o.file_pages, 1) END
+                     ) as total_spent
+            `;
+
+            const sumClauses = [];
+            let min = null, max = null;
+            if (filters.minSum !== undefined && filters.minSum !== null && filters.minSum !== '') {
+                min = parseFloat(filters.minSum);
+                if (isNaN(min)) min = null;
+            }
+            if (filters.maxSum !== undefined && filters.maxSum !== null && filters.maxSum !== '') {
+                max = parseFloat(filters.maxSum);
+                if (isNaN(max)) max = null;
+            }
+            if (min !== null) sumClauses.push('coalesce(total_spent, 0) >= $minSum');
+            if (max !== null) sumClauses.push('coalesce(total_spent, 0) <= $maxSum');
+            if (min !== null) params.minSum = min;
+            if (max !== null) params.maxSum = max;
+
+            const countClauses = [];
+            if (filters.minOrders !== undefined && filters.minOrders !== null && filters.minOrders !== '') {
+                const minC = parseInt(filters.minOrders);
+                if (!isNaN(minC)) {
+                    if (minC > 0) countClauses.push('order_count IS NOT NULL AND order_count >= $minOrders');
+                    else countClauses.push('coalesce(order_count, 0) >= $minOrders');
+                    params.minOrders = minC;
+                }
+            }
+            if (filters.maxOrders !== undefined && filters.maxOrders !== null && filters.maxOrders !== '') {
+                const maxC = parseInt(filters.maxOrders);
+                if (!isNaN(maxC)) {
+                    countClauses.push('coalesce(order_count, 0) <= $maxOrders');
+                    params.maxOrders = maxC;
+                }
+            }
+
+            const allClauses = [...sumClauses, ...countClauses];
+            if (allClauses.length > 0) {
+                query += ' WHERE ' + allClauses.join(' AND ');
+            }
+
+            query += `
+                RETURN u, 
+                       coalesce(order_count, 0) as order_count, 
+                       coalesce(total_spent, 0) as total_created_sum
+                ORDER BY u.created_at DESC
+            `;
+
+            console.log('findByFilters Query:', query.replace(/\n/g, ' '));
+            console.log('findByFilters Params:', params);
+
+            const result = await session.run(query, params);
+            
+            return result.records.map(record => {
+                const uProps = formatProperties(record.get('u').properties);
+                const countVal = record.get('order_count');
+                const sumVal = record.get('total_created_sum');
+                return {
+                    ...uProps,
+                    order_count: countVal != null ? Number(countVal.toNumber ? countVal.toNumber() : countVal) : 0,
+                    total_created_sum: sumVal != null ? Number(sumVal.toNumber ? sumVal.toNumber() : sumVal) : 0
+                };
+            });
+        } catch (error) {
+            console.error('Ошибка в findByFilters:', error.message);
+            throw error;
+        } finally { await session.close(); }
+    },
+
     findById: async (user_id) => {
         const session = getSession();
         try {
