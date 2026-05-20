@@ -115,3 +115,13 @@ export const getTopClientsStats = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getEmployeeStats = async (req, res) => {
+    try {
+        const data = await Order.getEmployeePerformance(req.query);
+        res.json({ data });
+    } catch (error) {
+        console.error('Error in getEmployeeStats:', error);
+        res.status(500).json({ error: error.message });
+    }
+};

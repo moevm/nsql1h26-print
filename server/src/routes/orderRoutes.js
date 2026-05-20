@@ -6,6 +6,7 @@ import {protect, requireAdmin} from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+router.get('/stats/employees', protect, requireAdmin, orderController.getEmployeeStats);
 router.get('/stats', protect, requireAdmin, orderController.getOrdersStats);
 router.get('/stats/top-clients', protect, requireAdmin, orderController.getTopClientsStats);
 router.get('/', protect, orderController.getOrders);

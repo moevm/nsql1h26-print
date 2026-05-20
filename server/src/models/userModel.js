@@ -133,8 +133,12 @@ export const User = {
             const userClauses = [];
 
             if (filters.role) { userClauses.push('u.role = $role'); params.role = filters.role; }
+            let deactivatedBool;
             if (filters.deactivated !== undefined) {
-                userClauses.push(filters.deactivated ? 'u.deactivated_at IS NOT NULL' : 'u.deactivated_at IS NULL');
+                deactivatedBool = (filters.deactivated === 'true' || filters.deactivated === true);
+            }
+            if (deactivatedBool !== undefined) {
+                userClauses.push(deactivatedBool ? 'u.deactivated_at IS NOT NULL' : 'u.deactivated_at IS NULL');
             }
             if (filters.name) {
                 userClauses.push('toLower(coalesce(u.first_name, "") + " " + coalesce(u.last_name, "")) CONTAINS toLower($name)');
