@@ -6,8 +6,8 @@ import { protect, requireAdmin } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.get('/filter', protect, requireAdmin, userController.getUsersByFilters);
-router.get('/', protect, userController.getUsers);
+router.get('/', protect, requireAdmin, userController.getUsers);
 router.get('/:id', protect, userController.getUserById);
-router.put('/:id', protect, validateUpdateUser, userController.updateUser);
+router.put('/:id', protect, requireAdmin, validateUpdateUser, userController.updateUser);
 
 export default router;

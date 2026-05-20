@@ -49,21 +49,25 @@ export const User = {
     find: async (filters = {}) => {
         const session = getSession();
         try {
+            const page = parseInt(filters.page, 10) || 1;
+            const limit = parseInt(filters.limit, 10) || 10;
+            const skip = (page - 1) * limit;
+
             let query = 'MATCH (u:User)';
             const params = {};
             const clauses = [];
 
             if (filters.first_name) {
-                clauses.push('u.first_name CONTAINS $first_name');
+                clauses.push('toLower(u.first_name) CONTAINS toLower($first_name)');
                 params.first_name = filters.first_name;
             }
             if (filters.role) {
-                clauses.push('u.role = $role');
+                clauses.push('toLower(u.role) = toLower($role)');
                 params.role = filters.role;
             }
 
             if (filters.last_name) {
-                clauses.push('u.last_name CONTAINS $last_name');
+                clauses.push('toLower(u.last_name) CONTAINS toLower($last_name)');
                 params.last_name = filters.last_name;
             }
 
@@ -76,15 +80,15 @@ export const User = {
             }
 
             if (filters.email) {
-                clauses.push('u.email CONTAINS $email');
+                clauses.push('toLower(u.email) CONTAINS toLower($email)');
                 params.email = filters.email;
             }
             if (filters.phone) {
-                clauses.push('u.phone CONTAINS $phone');
+                clauses.push('toLower(u.phone) CONTAINS toLower($phone)');
                 params.phone = filters.phone;
             }
             if (filters.user_id) {
-                clauses.push('u.user_id CONTAINS $user_id');
+                clauses.push('toLower(u.user_id) CONTAINS toLower($user_id)');
                 params.user_id = filters.user_id;
             }
             if (filters.created_from) {
@@ -99,10 +103,29 @@ export const User = {
             if (clauses.length > 0) {
                 query += ' WHERE ' + clauses.join(' AND ');
             }
-            query += ' RETURN u';
+
+            query += `
+                WITH u 
+                ORDER BY u.created_at DESC
+                WITH count(u) as total, collect(u) as all_users
+                RETURN total, all_users[$skip..$skip+$limit] as paged_users`;
+
+            params.skip = session.int ? session.int(skip) : skip;
+            params.limit = session.int ? session.int(limit) : limit;
 
             const result = await session.run(query, params);
-            return result.records.map(record => formatProperties(record.get('u').properties));
+
+            if (result.records.length === 0) {
+                return { total: 0, items: [] };
+            }
+
+            const record = result.records[0];
+            const total = Number(record.get('total'));
+            const pagedUsers = record.get('paged_users') || [];
+
+            const items = pagedUsers.map(node => formatProperties(node.properties));
+
+            return { total, items };
         } finally {
             await session.close();
         }

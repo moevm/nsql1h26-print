@@ -19,12 +19,12 @@ export const Service = {
             const clauses = ['s.deactivated_at IS NULL'];
 
             if (filters.service_type) {
-                clauses.push('s.service_type = $service_type');
+                clauses.push('toLower(s.service_type) = toLower($service_type)');
                 params.service_type = filters.service_type;
             }
 
             if (filters.color_mode) {
-                clauses.push('s.color_mode = $color_mode');
+                clauses.push('toLower(s.color_mode) = toLower($color_mode)');
                 params.color_mode = filters.color_mode;
             }
 
